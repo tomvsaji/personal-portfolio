@@ -13,25 +13,11 @@ const Projects = () => {
             <p>V Style Garments is a clothing retial and customizing store for women in Kerala</p>
           </div>
         </a>
-        <a href="https://vstylegarments.com" target="_blank" style={{textDecoration: 'none', color: 'black', maxWidth: '330px', width: '100%'}}>
+        <a href="https://amk.qa" target="_blank" style={{textDecoration: 'none', color: 'black', maxWidth: '330px', width: '100%'}}>
           <div className="project-list-item">
-            <img style={{maxWidth: '330px', width: '100%'}} src='/client-project1.png' alt='client-project1' />
-            <h3>V Style Garments</h3>
-            <p>V Style Garments is a clothing retial and customizing store for women in Kerala</p>
-          </div>
-        </a>
-        <a href="https://vstylegarments.com" target="_blank" style={{textDecoration: 'none', color: 'black', maxWidth: '330px', width: '100%'}}>
-          <div className="project-list-item">
-            <img style={{maxWidth: '330px', width: '100%'}} src='/client-project1.png' alt='client-project1' />
-            <h3>V Style Garments</h3>
-            <p>V Style Garments is a clothing retial and customizing store for women in Kerala</p>
-          </div>
-        </a>
-        <a href="https://vstylegarments.com" target="_blank" style={{textDecoration: 'none', color: 'black', maxWidth: '330px', width: '100%'}}>
-          <div className="project-list-item">
-            <img style={{maxWidth: '330px', width: '100%'}} src='/client-project1.png' alt='client-project1' />
-            <h3>V Style Garments</h3>
-            <p>V Style Garments is a clothing retial and customizing store for women in Kerala</p>
+            <img style={{maxWidth: '330px', width: '100%'}} src='/client-project2.png' alt='client-project2' />
+            <h3>AMK Safety and Security</h3>
+            <p>AMK Safety and Security is a fire safety and security company based out of Qatar. The requirements for them were to create a landing page with contact options end to end and a brochure for the organization</p>
           </div>
         </a>
       </div>
