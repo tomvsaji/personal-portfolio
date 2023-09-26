@@ -9,7 +9,7 @@ const Header = () => {
             Web Developer, Designer and Content Creator
           </h1>
           <p>
-            Hey, I am Tom. Currently working as a Technical Specialist at EssentiallySports. I love bringing cool designs to life and finding engineering solutions to porblems
+            Hey, I am Tom. Currently working as a Software Engineer at Applab Qatar. I work on Azure environments. Creating custom solutions for Azure Resources such as Cogntive Search, Azure Front Door and CDN, Azure Devops using Azure Functions, Azure App Service.
           </p>
         </div>
         <div className="about-image">
