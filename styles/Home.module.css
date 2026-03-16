@@ -1,1 +1,176 @@
+.main {
+  background: #090c10;
+  color: #e6edf3;
+  min-height: 100vh;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  padding: 0 24px 64px;
+}
 
+.navbar {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+}
+
+.navbar a,
+.actions a,
+.card a,
+.contactList a {
+  color: #8fbaff;
+  text-decoration: none;
+}
+
+.hero,
+.section {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.hero {
+  border: 1px solid #1f2937;
+  background: linear-gradient(145deg, #11161e 0%, #090c10 100%);
+  border-radius: 18px;
+  padding: 42px;
+  margin-bottom: 30px;
+}
+
+.kicker {
+  color: #5eead4;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  margin-bottom: 12px;
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  margin: 0;
+}
+
+.hero h2 {
+  color: #9db2c8;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  margin: 8px 0 16px;
+  font-weight: 500;
+}
+
+.hero p {
+  max-width: 900px;
+  line-height: 1.6;
+}
+
+.location {
+  color: #a8c5e4;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.heroHighlights {
+  color: #8fd2c4;
+}
+
+.actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.actions a {
+  border: 1px solid #2f3d4f;
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: border-color 0.2s ease;
+}
+
+.actions a:hover,
+.navbar a:hover,
+.card a:hover,
+.contactList a:hover {
+  color: #d9e8ff;
+}
+
+.actions a:hover {
+  border-color: #8fbaff;
+}
+
+.section {
+  margin-top: 34px;
+}
+
+.section h3 {
+  font-size: 1.6rem;
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.card,
+.projectCard {
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  padding: 18px;
+  background: #0d1218;
+}
+
+.card h4,
+.projectCard h4 {
+  margin-top: 0;
+}
+
+.card ul,
+.projectCard ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.55;
+}
+
+.projectList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.architectureLabel {
+  margin: 14px 0 6px;
+  color: #91a7be;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.architecture {
+  background: #101a25;
+  border: 1px dashed #2f3d4f;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  color: #b8cbe0;
+  font-size: 0.88rem;
+}
+
+.contactList p {
+  margin: 8px 0;
+}
+
+@media (max-width: 700px) {
+  .main {
+    padding: 0 16px 48px;
+  }
+
+  .navbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .hero {
+    padding: 24px;
+  }
+}
