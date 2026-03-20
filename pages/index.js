@@ -114,6 +114,7 @@ export default function Home() {
           <a href="#expertise">Expertise</a>
           <a href="#projects">Projects</a>
           <a href="#open-source">Open Source</a>
+          <a href="#writing">Writing</a>
           <a href="#contact">Contact</a>
         </nav>
 
@@ -134,6 +135,7 @@ export default function Home() {
             <a href="#projects">View Projects</a>
             <a href="https://github.com/tomvsaji" target="_blank" rel="noreferrer">GitHub</a>
             <a href="https://linkedin.com/in/tom-v-saji" target="_blank" rel="noreferrer">LinkedIn</a>
+            <a href="/blog/agent-evaluation-2026">Read Blog</a>
             <a href="#contact">Contact</a>
           </div>
         </section>
@@ -199,6 +201,22 @@ export default function Home() {
                 <li>REST API</li>
                 <li>Full test suite</li>
               </ul>
+            </article>
+          </div>
+        </section>
+
+
+        <section id="writing" className={styles.section}>
+          <h3>Writing</h3>
+          <div className={styles.grid}>
+            <article className={styles.card}>
+              <p className={styles.postLabel}>Featured post</p>
+              <h4>How to Evaluate AI Agent Systems in 2026: Metrics, Methods, and Tools</h4>
+              <p>
+                A practical guide to evaluating AI agents across correctness, tool use, cost,
+                robustness, simulations, observability, and production feedback loops.
+              </p>
+              <a href="/blog/agent-evaluation-2026">Read the full post</a>
             </article>
           </div>
         </section>
