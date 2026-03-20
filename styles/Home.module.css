@@ -180,3 +180,17 @@
 .card p {
   line-height: 1.6;
 }
+
+
+.sectionIntro {
+  color: #9db2c8;
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+
+.sectionIntro code {
+  background: #11161e;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
+}
