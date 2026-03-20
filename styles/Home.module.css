@@ -168,3 +168,15 @@
     padding: 24px;
   }
 }
+
+.postLabel {
+  color: #5eead4;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+
+.card p {
+  line-height: 1.6;
+}
