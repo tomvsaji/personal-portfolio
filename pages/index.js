@@ -211,6 +211,15 @@ export default function Home() {
           <p className={styles.sectionIntro}>Posts are now sourced from <code>content/blog/*.mdx</code> and published under <code>/blogs/[slug]</code>.</p>
           <div className={styles.grid}>
             <article className={styles.card}>
+              <p className={styles.postLabel}>Latest post</p>
+              <h4>Dreamer: The Personal Agent OS That Wants To Run Your Day</h4>
+              <p>
+                A practical look at Dreamer, Sidekick, and why the platform is positioning itself
+                as an operating system for personal AI agents.
+              </p>
+              <a href="/blogs/dreamer-personal-agent-os">Read the full post</a>
+            </article>
+            <article className={styles.card}>
               <p className={styles.postLabel}>Featured post</p>
               <h4>How to Evaluate AI Agent Systems in 2026: Metrics, Methods, and Tools</h4>
               <p>
