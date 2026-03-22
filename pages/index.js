@@ -4,9 +4,16 @@ import styles from '@/styles/Home.module.css'
 import { getAllBlogPosts } from '@/lib/blog'
 import { profile, sideProjects } from '@/lib/site-data'
 import SiteShell from '@/components/site-shell'
+import SocialLinks from '@/components/social-links'
 
 export default function Home({ posts, theme, toggleTheme }) {
   const [latestPost, ...morePosts] = posts
+  const socialLinks = [
+    { name: 'github', href: profile.github, title: 'GitHub' },
+    { name: 'linkedin', href: profile.linkedin, title: 'LinkedIn' },
+    { name: 'x', href: profile.x, title: 'X / Twitter' },
+    { name: 'email', href: `mailto:${profile.email}`, title: 'Email' },
+  ]
 
   return (
     <>
@@ -32,9 +39,13 @@ export default function Home({ posts, theme, toggleTheme }) {
               <div className={styles.actions}>
                 <Link href="/about">More on the about page</Link>
                 <Link href="/blogs">Browse all writing</Link>
-                <a href={profile.github} target="_blank" rel="noreferrer">GitHub</a>
-                <a href={profile.linkedin} target="_blank" rel="noreferrer">LinkedIn</a>
               </div>
+              <SocialLinks
+                links={socialLinks}
+                className={styles.socialLinks}
+                iconClassName={styles.socialLinkIcon}
+                label="Primary social links"
+              />
             </div>
             <div className={styles.heroAside}>
               <p className={styles.asideLabel}>Latest writing</p>

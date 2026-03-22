@@ -2,8 +2,16 @@ import Head from 'next/head'
 import styles from '@/styles/Home.module.css'
 import SiteShell from '@/components/site-shell'
 import { expertiseGroups, featuredProjects, profile, sideProjects } from '@/lib/site-data'
+import SocialLinks from '@/components/social-links'
 
 export default function AboutPage({ theme, toggleTheme }) {
+  const socialLinks = [
+    { name: 'github', href: profile.github, title: 'GitHub' },
+    { name: 'linkedin', href: profile.linkedin, title: 'LinkedIn' },
+    { name: 'x', href: profile.x, title: 'X / Twitter' },
+    { name: 'email', href: `mailto:${profile.email}`, title: 'Email' },
+  ]
+
   return (
     <>
       <Head>
@@ -95,10 +103,15 @@ export default function AboutPage({ theme, toggleTheme }) {
                 <h4>Reach out</h4>
                 <div className={styles.contactList}>
                   <p>Email: <a href={`mailto:${profile.email}`}>{profile.email}</a></p>
-                  <p>Phone: <a href={`tel:${profile.phone.replace(/\s+/g, '')}`}>{profile.phone}</a></p>
                   <p>LinkedIn: <a href={profile.linkedin} target="_blank" rel="noreferrer">{profile.linkedin.replace('https://', '')}</a></p>
                   <p>GitHub: <a href={profile.github} target="_blank" rel="noreferrer">{profile.github.replace('https://', '')}</a></p>
                 </div>
+                <SocialLinks
+                  links={socialLinks}
+                  className={styles.socialLinks}
+                  iconClassName={styles.socialLinkIcon}
+                  label="Contact links"
+                />
               </article>
             </div>
           </section>
