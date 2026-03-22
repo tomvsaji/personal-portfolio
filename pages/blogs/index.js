@@ -22,7 +22,8 @@ export default function BlogIndexPage({ posts, theme, toggleTheme }) {
               <p className={styles.kicker}>Writing</p>
               <h1>Articles and notes</h1>
               <p>
-                Posts are sourced from <code>content/blog/*.mdx</code> and prerendered at build time.
+                Essays, field notes, and practical write-ups on AI engineering, agent systems,
+                and building production-ready LLM products.
               </p>
             </div>
           </section>
