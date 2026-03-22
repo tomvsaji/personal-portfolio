@@ -3,8 +3,9 @@ import Link from 'next/link'
 import styles from '@/styles/BlogPost.module.css'
 import { getBlogPost, getBlogSlugs } from '@/lib/blog'
 import { renderMarkdown } from '@/lib/render-markdown'
+import SiteShell from '@/components/site-shell'
 
-export default function BlogPostPage({ post, renderedContent }) {
+export default function BlogPostPage({ post, renderedContent, theme, toggleTheme }) {
   return (
     <>
       <Head>
@@ -13,27 +14,29 @@ export default function BlogPostPage({ post, renderedContent }) {
       </Head>
 
       <main className={styles.page}>
-        <article className={styles.article}>
-          <div className={styles.topBar}>
-            <Link href="/" className={styles.backLink}>
-              ← Back to portfolio
-            </Link>
-            <span className={styles.meta}>
-              {post.publishedAt} {post.readingTime ? `· ${post.readingTime}` : ''}
-            </span>
-          </div>
+        <SiteShell theme={theme} toggleTheme={toggleTheme} currentPath="/blogs">
+          <article className={styles.article}>
+            <div className={styles.topBar}>
+              <Link href="/blogs" className={styles.backLink}>
+                ← Back to writing
+              </Link>
+              <span className={styles.meta}>
+                {post.publishedAt} {post.readingTime ? `· ${post.readingTime}` : ''}
+              </span>
+            </div>
 
-          <header className={styles.hero}>
-            <p className={styles.eyebrow}>Blog Post</p>
-            <h1>{post.title}</h1>
-            {post.description ? <p className={styles.lead}>{post.description}</p> : null}
-          </header>
+            <header className={styles.hero}>
+              <p className={styles.eyebrow}>Blog Post</p>
+              <h1>{post.title}</h1>
+              {post.description ? <p className={styles.lead}>{post.description}</p> : null}
+            </header>
 
-          <section
-            className={styles.markdownContent}
-            dangerouslySetInnerHTML={{ __html: renderedContent }}
-          />
-        </article>
+            <section
+              className={styles.markdownContent}
+              dangerouslySetInnerHTML={{ __html: renderedContent }}
+            />
+          </article>
+        </SiteShell>
       </main>
     </>
   )
