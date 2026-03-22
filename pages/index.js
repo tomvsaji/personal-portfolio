@@ -135,7 +135,7 @@ export default function Home() {
             <a href="#projects">View Projects</a>
             <a href="https://github.com/tomvsaji" target="_blank" rel="noreferrer">GitHub</a>
             <a href="https://linkedin.com/in/tom-v-saji" target="_blank" rel="noreferrer">LinkedIn</a>
-            <a href="/blog/agent-evaluation-2026">Read Blog</a>
+            <a href="/blogs/agent-evaluation-2026">Read Blog</a>
             <a href="#contact">Contact</a>
           </div>
         </section>
@@ -208,6 +208,7 @@ export default function Home() {
 
         <section id="writing" className={styles.section}>
           <h3>Writing</h3>
+          <p className={styles.sectionIntro}>Posts are now sourced from <code>content/blog/*.mdx</code> and published under <code>/blogs/[slug]</code>.</p>
           <div className={styles.grid}>
             <article className={styles.card}>
               <p className={styles.postLabel}>Featured post</p>
@@ -216,7 +217,7 @@ export default function Home() {
                 A practical guide to evaluating AI agents across correctness, tool use, cost,
                 robustness, simulations, observability, and production feedback loops.
               </p>
-              <a href="/blog/agent-evaluation-2026">Read the full post</a>
+              <a href="/blogs/agent-evaluation-2026">Read the full post</a>
             </article>
           </div>
         </section>
