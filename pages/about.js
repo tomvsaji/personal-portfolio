@@ -31,6 +31,12 @@ export default function AboutPage({ theme, toggleTheme }) {
               <h2>{profile.headline}</h2>
               <p>{profile.summary}</p>
               <p className={styles.heroHighlights}>{profile.highlights}</p>
+              <SocialLinks
+                links={socialLinks}
+                className={styles.socialLinks}
+                iconClassName={styles.socialLinkIcon}
+                label="Primary social links"
+              />
             </div>
           </section>
 
