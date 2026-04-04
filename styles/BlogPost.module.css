@@ -97,6 +97,25 @@
   font-size: 0.95em;
 }
 
+.markdownContent pre {
+  background: #0b1220;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 18px 0;
+}
+
+.markdownContent pre code {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  display: block;
+  white-space: pre;
+  color: #dbe6ff;
+}
+
 .markdownContent a {
   color: var(--accent);
 }
