@@ -7,7 +7,7 @@ readingTime: 11 min read
 
 Most text-to-SQL demos show you the happy path: clean question in, correct SQL out. Real production environments are messier. Table names are ambiguous. Columns store codes instead of labels. A plausible query can return a confidently wrong answer with no runtime error.
 
-In my [previous post](https://tomvsaji.com), I covered a year of building a SQL agent on top of a complex, legacy on-premises database — what worked, what hurt, and how the architecture evolved. That post covered the **why**. This one covers the **how**.
+In my [previous post](https://tomvsaji.com/blogs/building-reliable-sql-agents-in-complex-legacy-environments), I covered a year of building a SQL agent on top of a complex on-premises SQL Server environment with linked-server dependencies across business domains — what worked, what hurt, and how the architecture evolved. That post covered the **why**. This one covers the **how**.
 
 Specifically: what does the agent do between receiving a question and returning an answer?
 
@@ -79,21 +79,71 @@ Next, the agent calls `get_schema` for candidate sources.
 
 For `employees`, it might see:
 
-| column      | type    | sample     |
-| ----------- | ------- | ---------- |
-| employee_id | VARCHAR | EMP001     |
-| department  | VARCHAR | D042       |
-| dept_name   | VARCHAR | Operations |
-| status      | VARCHAR | Active     |
+<table>
+  <thead>
+    <tr>
+      <th>column</th>
+      <th>type</th>
+      <th>sample</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>employee_id</td>
+      <td>VARCHAR</td>
+      <td>EMP001</td>
+    </tr>
+    <tr>
+      <td>department</td>
+      <td>VARCHAR</td>
+      <td>D042</td>
+    </tr>
+    <tr>
+      <td>dept_name</td>
+      <td>VARCHAR</td>
+      <td>Operations</td>
+    </tr>
+    <tr>
+      <td>status</td>
+      <td>VARCHAR</td>
+      <td>Active</td>
+    </tr>
+  </tbody>
+</table>
 
 For `absence_records`:
 
-| column       | type    | sample     |
-| ------------ | ------- | ---------- |
-| employee_id  | VARCHAR | EMP001     |
-| absence_date | DATE    | 2025-11-03 |
-| reason_code  | VARCHAR | NP         |
-| approved     | BIT     | 0          |
+<table>
+  <thead>
+    <tr>
+      <th>column</th>
+      <th>type</th>
+      <th>sample</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>employee_id</td>
+      <td>VARCHAR</td>
+      <td>EMP001</td>
+    </tr>
+    <tr>
+      <td>absence_date</td>
+      <td>DATE</td>
+      <td>2025-11-03</td>
+    </tr>
+    <tr>
+      <td>reason_code</td>
+      <td>VARCHAR</td>
+      <td>NP</td>
+    </tr>
+    <tr>
+      <td>approved</td>
+      <td>BIT</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
 
 Now the agent is grounded in facts:
 

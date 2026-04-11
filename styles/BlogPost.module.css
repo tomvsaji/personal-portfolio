@@ -120,6 +120,27 @@
   color: var(--accent);
 }
 
+.markdownContent table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  display: block;
+  overflow-x: auto;
+}
+
+.markdownContent th,
+.markdownContent td {
+  border: 1px solid var(--border-color);
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.markdownContent th {
+  color: var(--text-strong);
+  background: var(--surface-elevated);
+}
+
 .markdownContent hr {
   border: 0;
   border-top: 1px solid var(--border-color);
