@@ -54,7 +54,7 @@ Instead of routing questions to pre-built domain generators, the agent now disco
 
 - **List Tables** — returns a catalogue of all available data sources with descriptions and join keys. Also injects role-scoped context for the current user so the agent understands what data is in scope.
 - **Get Schema** — returns column definitions and sample rows for a specific source.
-- **Get Distinct Values** — returns unique values for a column with optional search. We then apply similarity matching in the application layer to resolve misspellings and near-matches safely.
+- **Get Distinct Values** — returns unique values for a column with optional search. The agent then uses iterative tool-calling (varied lookups and disambiguation prompts) to resolve misspellings and near-matches without guessing.
 - **Resolve Name to Code** — translates a human-readable entity name into its internal identifier code, preventing the agent from ever filtering on name columns directly.
 - **Execute SQL** — validates, secures, and runs the query with full retry logic.
 
