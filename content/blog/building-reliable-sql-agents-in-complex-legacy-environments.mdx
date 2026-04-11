@@ -1,6 +1,6 @@
 ---
-title: Building Reliable SQL Agents in Complex, Legacy Environments
-description: Lessons from building and hardening an enterprise text-to-SQL agent in a fragile on-prem SQL Server environment.
+title: Building Reliable SQL Agents in Complex On-Prem SQL Environments
+description: Lessons from building and hardening an enterprise text-to-SQL agent in a complex on-prem SQL Server environment with linked-server dependencies.
 publishedAt: April 4, 2026
 readingTime: 11 min read
 ---
@@ -13,7 +13,9 @@ Over the past year, our team built an AI agent capable of querying a complex, on
 
 Before talking about the agent, it's worth understanding the data environment — because that context shapes every decision we made.
 
-The database was a legacy on-premises SQL Server system composed of multiple linked views spanning several business domains. Behind-the-scenes dependencies made it fragile: joins failed unexpectedly, performance degraded on complex queries, and there was no fuzzy search or text indexing to handle real-world inputs like misspelled names or partial matches.
+The database was a complex on-premises SQL Server environment with linked-server dependencies spanning multiple business domains. Behind-the-scenes coupling made it fragile: joins failed unexpectedly, performance degraded on complex queries, and there was no fuzzy search or text indexing to handle real-world inputs like misspelled names or partial matches.
+
+This wasn't a full data warehouse implementation with a unified semantic layer. It was a distributed operational reporting stack that required careful query orchestration.
 
 On top of that, every query the agent generated had to respect role-based access rules across a strict organizational hierarchy, each level with a different data scope. Permission filtering on dynamic, AI-generated SQL is not a solved problem. Getting it wrong in an enterprise environment has real consequences.
 
@@ -93,7 +95,7 @@ Every database call is wrapped in an OpenTelemetry span with the query, row coun
 
 If I were starting fresh:
 
-- **Start with data modernization.** Unified schema design, quality constraints, and proper join performance via a data lake rather than fighting a legacy view structure throughout development.
+- **Start with data modernization.** Unified schema design, quality constraints, and proper join performance via a data lake rather than fighting a fragmented linked-view structure throughout development.
 - **Define agent-friendly metadata upfront.** Column descriptions, join keys, and domain rules should live in source control from the start — not discovered iteratively through production failures.
 - **Use the explorer pattern from day one.** Domain-specific plugins feel clean early and become a maintenance burden fast. A single agent that discovers schema dynamically scales much better.
 - **Enforce access control natively at the infrastructure level.** Application-layer CTE injection is a solid fallback for environments you don't fully control, but native row-level security is a stronger long-term foundation.
