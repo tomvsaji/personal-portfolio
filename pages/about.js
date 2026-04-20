@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import styles from '@/styles/Home.module.css'
 import SiteShell from '@/components/site-shell'
-import { expertiseGroups, featuredProjects, profile, sideProjects } from '@/lib/site-data'
+import { aboutContent, expertiseGroups, featuredProjects, profile, sideProjects } from '@/lib/site-data'
 import SocialLinks from '@/components/social-links'
 
 export default function AboutPage({ theme, toggleTheme }) {
@@ -20,6 +20,10 @@ export default function AboutPage({ theme, toggleTheme }) {
           name="description"
           content="Background, expertise, project highlights, and contact details for Tom Vellavoor Saji."
         />
+        <meta property="og:title" content="About | Tom Vellavoor Saji" />
+        <meta property="og:description" content="Background, expertise, project highlights, and contact details for Tom Vellavoor Saji." />
+        <meta property="og:type" content="profile" />
+        <meta property="og:url" content="https://tomvsaji.com/about" />
       </Head>
 
       <main className={styles.page}>
@@ -29,8 +33,9 @@ export default function AboutPage({ theme, toggleTheme }) {
               <p className={styles.kicker}>About</p>
               <h1>{profile.name}</h1>
               <h2>{profile.headline}</h2>
-              <p>{profile.summary}</p>
-              <p className={styles.heroHighlights}>{profile.highlights}</p>
+              <p>{aboutContent.bio}</p>
+              <p>{aboutContent.workStyle}</p>
+              <p className={styles.heroHighlights}>{aboutContent.currentFocus}</p>
               <SocialLinks
                 links={socialLinks}
                 className={styles.socialLinks}

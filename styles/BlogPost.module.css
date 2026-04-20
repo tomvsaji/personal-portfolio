@@ -60,6 +60,67 @@
   line-height: 1.8;
 }
 
+.toc {
+  margin-top: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-elevated);
+  border-radius: 18px;
+  padding: 22px 28px;
+}
+
+.tocLabel {
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.76rem;
+  margin-bottom: 12px;
+}
+
+.tocList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  counter-reset: toc-counter;
+}
+
+.tocList li {
+  counter-increment: toc-counter;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.tocList li::before {
+  content: counter(toc-counter, decimal-leading-zero);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  min-width: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tocNested {
+  padding-left: 32px;
+}
+
+.tocNested::before {
+  content: '↳' !important;
+  counter-increment: none !important;
+  color: var(--text-muted);
+}
+
+.tocList a {
+  color: var(--text-body);
+  text-decoration: none;
+  line-height: 1.5;
+  transition: color 0.15s ease;
+}
+
+.tocList a:hover {
+  color: var(--accent);
+}
+
 .markdownContent {
   margin-top: 20px;
 }
@@ -82,6 +143,7 @@
 .markdownContent blockquote {
   line-height: 1.8;
   color: var(--text-body);
+  max-width: 65ch;
 }
 
 .markdownContent ul {

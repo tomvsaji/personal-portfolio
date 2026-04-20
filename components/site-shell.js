@@ -26,6 +26,15 @@ export default function SiteShell({ children, theme = 'dark', toggleTheme, curre
         </nav>
       </header>
       {children}
+
+      <footer className={styles.footer}>
+        <nav className={styles.footerNav} aria-label="Footer navigation">
+          <Link href="/">Home</Link>
+          <Link href="/blogs">Writing</Link>
+          <Link href="/about">About</Link>
+        </nav>
+        <p className={styles.footerCopy}>© {new Date().getFullYear()} Tom Vellavoor Saji</p>
+      </footer>
     </div>
   )
 }

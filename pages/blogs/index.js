@@ -13,6 +13,10 @@ export default function BlogIndexPage({ posts, theme, toggleTheme }) {
           name="description"
           content="Articles on AI engineering, agentic systems, and production-grade LLM platforms."
         />
+        <meta property="og:title" content="Writing | Tom Vellavoor Saji" />
+        <meta property="og:description" content="Articles on AI engineering, agentic systems, and production-grade LLM platforms." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://tomvsaji.com/blogs" />
       </Head>
 
       <main className={styles.page}>

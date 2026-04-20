@@ -25,6 +25,10 @@ export default function Home({ posts, theme, toggleTheme }) {
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+        <meta property="og:title" content="Tom Vellavoor Saji | AI Engineer" />
+        <meta property="og:description" content="AI engineer building agentic systems, Azure AI products, and production-ready LLM platforms." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://tomvsaji.com" />
       </Head>
 
       <main className={styles.page}>
