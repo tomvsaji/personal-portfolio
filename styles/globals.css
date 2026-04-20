@@ -61,3 +61,8 @@ code {
   border-radius: 8px;
   padding: 0.1rem 0.35rem;
 }
+
+/* Hide Next.js dev badge */
+body > nextjs-portal {
+  display: none;
+}

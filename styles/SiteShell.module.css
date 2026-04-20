@@ -48,6 +48,38 @@
   cursor: pointer;
 }
 
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 48px;
+  padding: 24px 0 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.footerNav {
+  display: flex;
+  gap: 20px;
+}
+
+.footerNav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.footerNav a:hover {
+  color: var(--text-strong);
+}
+
+.footerCopy {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 18px 16px 40px;
