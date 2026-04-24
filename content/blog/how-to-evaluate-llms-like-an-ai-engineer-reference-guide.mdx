@@ -1,0 +1,405 @@
+---
+title: How to Evaluate LLMs Like an AI Engineer: A Deep-Dive Reference Guide
+description: A comprehensive reference on benchmark systems, quantization tradeoffs, MoE internals, tool-calling evals, GPU requirements, and how to read new model releases using Gemma 4 as a case study.
+publishedAt: April 24, 2026
+readingTime: 28 min read
+---
+
+> A comprehensive reference covering benchmark systems, quantization tradeoffs, MoE architecture internals, tool calling evaluation, GPU requirements, and how to read a new model release — using Google Gemma 4 as the live case study.
+
+---
+
+## 1. The Fundamental Challenge: Why Evaluation is Hard
+
+Before reading any benchmark number, you need to understand the three failure modes that make LLM evaluation deceptively tricky.
+
+**Contamination** occurs when benchmark test questions leak into a model's training data — a model that "achieves 90% on MMLU" may have simply memorized those specific questions. This is not hypothetical: researchers have proposed audit frameworks specifically to detect when noisy or rewritten versions of benchmark problems consistently outperform clean baselines, which is a signature of memorization rather than genuine generalization.[^1][^2][^3]
+
+**Saturation** happens when a benchmark stops distinguishing between good models. MMLU was saturated by September 2024 when OpenAI o1-preview scored 92.3%, and GPQA Diamond was saturated by November 2025 when Gemini 3 Pro hit 93.8%. Saturated benchmarks tell you nothing about the frontier. A score of "80% on MMLU" in 2026 carries zero signal.[^4][^5]
+
+**Gaming** is the deliberate version of contamination: models fine-tuned specifically to perform well on known benchmark distributions without improving on real tasks. The gap between benchmark scores and production utility widened dramatically in 2025. Public leaderboards lost predictive power for real use cases.[^3][^4]
+
+The practical implication: **always look at multiple benchmarks**, weight newer and harder ones more heavily, and factor in human preference signals alongside static scores.
+
+---
+
+## 2. The Benchmark Ecosystem: What Each Score Actually Measures
+
+### 2.1 Knowledge & Reasoning Benchmarks
+
+| Benchmark | What It Tests | Current Ceiling / Status | Why It Matters |
+|-----------|--------------|--------------------------|----------------|
+| **MMLU** | Multi-subject knowledge across 57 domains (undergrad level) | ~91% — saturated 2024[^5] | Historical baseline only; useless for frontier comparison |
+| **MMLU-Pro** | 10-choice variant; harder, more discriminating | ~90% ceiling, top models ~94%[^6] | Still useful for mid-tier comparisons |
+| **GPQA Diamond** | 198 PhD-level "Google-proof" STEM questions | ~80% ceiling; near-saturated Nov 2025[^5] | Expert-level reasoning; useful while spread exists |
+| **HLE (Humanity's Last Exam)** | 2,500+ research-frontier multi-modal questions | 51% "supported" ceiling; top models ~40-53%[^5][^7] | **The clearest frontier discriminator in 2026** |
+| **AIME 2026** | Mathematical competition problems (annual, contamination-resistant) | ~90% top score[^8] | Tracks mathematical reasoning; renewed annually fights contamination |
+
+**Key insight:** HLE is the most important knowledge benchmark right now because it has the most spread — Claude Opus 4.6 at 40% vs GPT-5.2 at 35.2% vs Gemma 4 31B at a lower level. When a benchmark shows a 15-point gap between top models, it has useful signal. MMLU-Pro showing a 4-point gap has very little.[^7]
+
+### 2.2 Coding Benchmarks
+
+| Benchmark | What It Tests | Key Property |
+|-----------|--------------|--------------|
+| **HumanEval / MBPP** | Function-completion puzzles | Largely saturated; good for baselines |
+| **LiveCodeBench v6** | Problems from LeetCode, AtCoder, Codeforces collected *continuously* | **Contamination-resistant** by design — new problems added from active contest platforms[^9][^10] |
+| **SWE-bench Verified** | Real GitHub issues from open-source repos | Tests real-world engineering, not algorithmic puzzles[^11]; top models at ~80%[^7] |
+| **Codeforces ELO** | Competitive programming rating | Proxy for algorithmic reasoning quality at human competition levels |
+
+LiveCodeBench is the gold standard for coding evaluation because it continuously collects new problems — a model cannot memorize what doesn't exist yet during training. Gemma 4 31B scores 80.0% on LiveCodeBench v6, which is a meaningful signal for a 31B open-weight model.[^8][^10]
+
+### 2.3 Human Preference: Chatbot Arena / Arena AI
+
+The Arena system (originally LMSYS Chatbot Arena) is the closest thing the field has to a ground truth for general usefulness. Two models answer the same prompt anonymously; the human picks the better response; the result updates an ELO-based (now Bradley-Terry) rating.[^12][^13]
+
+Key properties of the ELO/Arena score:
+- A 50-point gap means the higher-rated model wins **~57% of head-to-head matchups**[^14]
+- A 100-point gap means it wins **~64% of the time**[^14]
+- Scores are relative, not absolute — ELO 1452 is not "45% better" than ELO 1400[^15]
+- Captures style, helpfulness, nuance, and instruction-following — qualities static benchmarks miss entirely[^13]
+- The Arena transitioned from raw ELO to the Bradley-Terry model for more statistically robust ratings across hundreds of models[^13]
+
+In 2026, Gemma 4 31B holds Arena ELO 1452 (#3 open model), and the 26B MoE holds 1441 (#6). This is more meaningful than its GPQA score because it reflects what real humans prefer in practice.[^16][^17]
+
+### 2.4 Agentic & Tool Use Benchmarks
+
+As applications shift from chat to agents, these benchmarks matter most for production systems.
+
+**Berkeley Function Calling Leaderboard (BFCL) v4** is the de facto standard for tool calling evaluation:[^18][^19]
+- Tests LLM ability to select, format, and execute API calls from natural language
+- Uses AST (Abstract Syntax Tree) evaluation for correctness — the generated function call is parsed and compared structurally, not via string matching
+- Versions track capability progression: v1 basic → v2 enterprise → v3 multi-turn → v4 full agentic evaluation[^20]
+- 1,200+ test cases across Python, Java, SQL, and REST APIs[^21]
+- Metrics: AST accuracy, tool selection accuracy, hallucination rate[^20]
+
+**τ²-bench (Tau-2)** tests a more realistic agentic scenario where both the AI agent and the human user use tools to modify a shared environment. The key finding: models show a drop of **up to 25 points in task success rate** when moving from solo tool-use to interactive dual-control scenarios — even top models like GPT-4.1. This is a sobering signal for anyone building multi-step agentic workflows.[^22][^23][^24]
+
+**ToolBench / ToolEval** covers 16,000+ real-world APIs from RapidAPI, using LLM-as-a-Judge (ChatGPT) to assess pass rate and win rate. Primarily useful for training signal.[^21]
+
+### 2.5 The HuggingFace Open LLM Leaderboard
+
+The Open LLM Leaderboard is the canonical place to compare open-weight models in a reproducible, standardized setup. Version 1 used MMLU, ARC, HellaSwag, TruthfulQA — all since saturated. Hugging Face overhauled it to v2 in mid-2024 with harder benchmarks: MMLU-Pro, GPQA, MUSR, MATH, IFEval, and BBH.[^25][^26][^27]
+
+The model shuffled dramatically — some models moved up or down by up to 59 places — proving that old benchmark choice was genuinely misleading about model quality.[^25]
+
+---
+
+## 3. How to Read a New Model Release
+
+When Google (or any lab) publishes a new model with benchmark scores, here is a systematic checklist:
+
+### Step 1: Identify the Benchmarks Used
+Ask: Are these benchmarks in the "still meaningful" set? In 2026, the benchmarks that still separate models are HLE, GPQA, MMLU-Pro, SWE-bench, LiveCodeBench, BFCL, OSWorld, and Terminal-Bench 2.0. Seeing only MMLU in a release should be a red flag.[^6]
+
+### Step 2: Check for Self-Reported vs. Third-Party Scores
+Self-reported numbers are evaluated with the lab's own prompting strategy, few-shot settings, and infrastructure. Third-party evaluations (HuggingFace leaderboard, Artificial Analysis) use standardized setups. The gap can be 5-10+ percentage points on the same benchmark.
+
+### Step 3: Look at Relative Scores, Not Raw Numbers
+A 31B model scoring 84.3% on GPQA Diamond is extraordinary — compare it against models of the same parameter count, not against a 671B model. Gemma 4 31B outperforming models 20x its size on multiple benchmarks is the correct framing. When Gemma 4 26B MoE scores 88.3% on AIME 2026 while activating only 3.8B parameters, the "intelligence per active parameter" metric becomes the real story.[^28][^8]
+
+### Step 4: Check the Arena / Human Preference Signal
+A model with strong static benchmark scores but poor Arena performance often means it was over-optimized (or its training data was contaminated with benchmarks). Arena ELO is harder to game because humans vote on live, open-ended prompts. Gemma 4 31B at Arena #3 with ELO 1452 provides stronger evidence of real-world quality than any single academic benchmark.[^16]
+
+### Step 5: Verify Day-One Production Readiness
+Strong benchmarks don't mean the model is production-ready on day one. Gemma 4 launched with broken QLoRA fine-tuning, HuggingFace Transformers not recognizing the `gemma4` architecture, and PEFT unable to handle the new `gemma4ClippableLinear` layer — all documented within 24 hours. For any new model, check the GitHub issues, the HuggingFace community discussions, and whether major inference frameworks (vLLM, llama.cpp, Ollama) have merged support yet.[^16]
+
+### Step 6: Apply a "Task-Specific" Filter
+No benchmark tells you how the model will perform on your specific task. The standard practice is to build a **small eval set** of 50-200 examples that mirror your production distribution and run all candidate models through it. This is the only evaluation that ultimately matters for deployment decisions.
+
+---
+
+## 4. Gemma 4: Live Case Study
+
+### 4.1 The Family at a Glance
+
+| Model | Architecture | Total Params | Active Params | Context | Primary Target |
+|-------|-------------|-------------|---------------|---------|----------------|
+| E2B | Dense | 5.1B | ~2.3B effective | 128K | Mobile / on-device |
+| E4B | Dense | ~8B | ~4B effective | 128K | Edge / embedded |
+| 26B A4B | MoE | 26B | **3.8B** | 256K | Workstation / server |
+| 31B Dense | Dense | 31B | 31B | 256K | Research / fine-tuning |
+
+The "E" (Effective) naming means the model is sized by its effective active parameters, not total weights. The 26B "A4B" naming means "26B total, 4B active".[^29]
+
+### 4.2 Benchmark Scores
+
+| Benchmark | 31B IT (Thinking) | 26B A4B IT | Gemma 3 27B IT |
+|-----------|------------------|------------|----------------|
+| AIME 2026 | **89.2%** | 88.3% | 20.8%[^8] |
+| LiveCodeBench v6 | **80.0%** | 77.1% | 29.1%[^8] |
+| GPQA Diamond | **84.3%** | 82.3% | 42.4%[^8] |
+| Arena AI ELO | #3 (1452) | #6 (1441) | — [^16][^17] |
+
+The jump from Gemma 3 to Gemma 4 is generational, not incremental. GPQA went from 42.4% to 84.3% — effectively doubling.[^8]
+
+### 4.3 Gemma 4 vs. Competitor Open Models
+
+| Benchmark | Gemma 4 31B | Qwen 3.5 27B | Llama 4 Scout (17B active / 109B total) |
+|-----------|------------|-------------|----------------------------------------|
+| MMLU-Pro | 85.2% | **86.1%** | ~80%[^17] |
+| GPQA Diamond | 84.3% | **85.5%** | ~74%[^17] |
+| AIME 2026 | **89.2%** | ~85% | N/A[^17] |
+| LiveCodeBench v6 | 80.0% | **83.6%** | ~68%[^17] |
+| Codeforces ELO | **2150** | ~1900 | ~1400[^17] |
+| Arena AI Text | #3 (1452) | ~#2 (est.) | ~#10[^17] |
+| Inference Speed (RTX 4090 Q4) | ~25 tok/s | **~35 tok/s** | — |
+
+Qwen 3.5 27B edges out Gemma 4 31B on knowledge benchmarks (GPQA, MMLU-Pro) by about 1 percentage point. Gemma 4 31B dominates on mathematics competition (AIME, Codeforces) and human preference (Arena). Llama 4 Scout, despite carrying 109B total parameters, generally trails both on reasoning benchmarks — a dramatic demonstration of MoE efficiency.[^17]
+
+### 4.4 The Apache 2.0 License Change
+Previous Gemma generations used a custom Google license with usage restrictions that required legal review and flagged compliance edge cases. Gemma 4 ships under standard Apache 2.0 — the same terms as Qwen, Mistral, and most of the open-weight ecosystem. For enterprise teams, this removes friction entirely: no custom clauses, no "Harmful Use" carve-outs requiring legal interpretation.[^29]
+
+---
+
+## 5. Dense vs. Mixture-of-Experts (MoE): Under the Hood
+
+### 5.1 The Core Architectural Difference
+
+In a standard **dense transformer**, every input token passes through every parameter in every layer. Computational cost scales directly with parameter count — a 70B model is ~10× more expensive to run than a 7B model.[^30]
+
+**Mixture of Experts** breaks this coupling. Each transformer layer contains multiple parallel feed-forward networks (the "experts") plus a learned routing network (the "gating network" or "router"). When a token arrives at an MoE layer, the router computes a small softmax over expert scores and selects only the top-k experts (typically k=1 or k=2) to actually process that token. All other experts remain inactive for that token.[^31]
+
+This is called **sparse activation**. The total parameter count of an MoE layer is:
+
+\[\text{Parameters}_{\text{MoE}} = N_{\text{experts}} \times \text{Parameters}_{\text{expert}}\]
+
+But the computational cost scales with only the *k* active experts, not with the full \(N_{\text{experts}}\). DeepSeek-V3 makes this concrete: 671B total parameters, 37B active per token — building a model with the knowledge capacity of a 671B model at roughly the inference cost of a 37B one.[^32][^30]
+
+### 5.2 Why MoE Is Not Simply "Cheaper"
+
+A subtle but important point: estimating MoE inference cost by naively looking at active parameters is **misleading**. MoE models tend to be shallower and wider than dense models of equivalent total parameter count. Fewer layers means fewer sequential operations, which actually reduces wall-clock latency more than the active-parameter ratio would suggest. The inference advantage of an MoE comes primarily from its reduced layer depth and lower network communication overhead, not just fewer active parameters.[^33]
+
+The practical implication: Gemma 4's 26B MoE with 3.8B active parameters doesn't run like a 3.8B model — it runs faster than a 26B dense model but slower than a native 3.8B model, because you still need to load all 26B parameters into VRAM and route through the expert selection mechanism.
+
+### 5.3 Expert Specialization and Collapse
+
+The intended behavior of MoE is that different experts specialize on different types of content — some handle technical language, others handle dialogue, others handle code. This specialization is emergent, not explicitly programmed.
+
+However, MoE models face a pathological failure mode during training called **expert collapse** (or routing collapse):[^34][^35]
+
+1. Early in training, if expert A happens to perform slightly better on the initial batches, the router learns to prefer it
+2. Expert A receives more gradient signal, improves faster
+3. The feedback loop intensifies — the router becomes increasingly confident in expert A
+4. Other experts receive few or no tokens, fail to learn meaningful specializations, and become "dead" parameters[^34]
+5. The model degenerates into a smaller effective model with only a few active expert paths
+
+The solution is an **auxiliary load-balancing loss** added to the primary task loss:[^36][^35]
+
+\[L_{\text{total}} = L_{\text{task}} + \alpha \cdot L_{\text{aux}}\]
+
+The auxiliary loss penalizes uneven expert utilization, forcing the router to distribute tokens. However, setting α too high causes the router to prioritize load balancing over task performance — it distributes tokens evenly but ignores whether the token is actually a good match for the expert. Finding the right α is an active research problem.[^37]
+
+Modern architectures like Gemma 4's 26B MoE also introduce **router noise** (random noise added to router logits during training) to force occasional exploration of non-preferred experts.[^34]
+
+### 5.4 MoE vs. Dense: When to Choose Each
+
+| Consideration | Dense | MoE |
+|--------------|-------|-----|
+| Inference latency (low batch) | ✅ More predictable | ⚠️ Routing overhead |
+| Throughput (high batch) | ✅ Simpler to scale | ✅ Lower active-param cost |
+| Fine-tuning | ✅ Straightforward | ⚠️ Expert collapse risk |
+| VRAM (total) | Lower total params needed | Higher — all experts must be loaded |
+| Quality per active compute | Good | ✅ Often better |
+| Production stability | ✅ Battle-tested | ⚠️ Routing instability edge cases |
+
+For an AI engineer deploying locally: if VRAM is the constraint, a quantized MoE can fit a model with far more total capacity into your available memory. If fine-tuning is a priority, dense models are currently safer. Gemma 4 31B Dense was specifically noted as the better choice for fine-tuning because it provides full-parameter access without routing complexity.[^38]
+
+---
+
+## 6. Precision Formats: FP16, 8-bit, and 4-bit
+
+### 6.1 The Memory Formula
+
+Every parameter in an LLM is stored as a floating-point number. The number of bits used to represent it determines memory consumption per parameter:
+
+\[\text{VRAM} \approx (\text{Parameters} \times \text{bytes per parameter}) + \text{Overhead (KV cache, etc.)}\]
+
+- **FP32**: 4 bytes/param — only used for training, rarely inference
+- **BF16 / FP16**: 2 bytes/param — the "full precision" inference baseline
+- **FP8 / INT8 (Q8)**: 1 byte/param — 50% memory reduction
+- **INT4 (Q4)**: 0.5 bytes/param — 8× reduction vs FP16[^39][^40]
+
+### 6.2 The Accuracy Trade-Off
+
+The most comprehensive empirical study on this topic (over 500,000 evaluations on the full Llama 3.1 family) found:[^41][^42]
+- **FP8 is effectively lossless** across all model scales
+- **Well-tuned INT8 achieves 1–3% accuracy degradation** — acceptable for most production tasks
+- **INT4 weight-only (W4A16) is more competitive than expected**, often rivaling 8-bit quantization when done well
+- 4-bit quantization introduces a **30% latency increase for single-token requests** due to dequantization overhead (weights must be unpacked from 4-bit back to FP16 before computation)[^39]
+
+A practical summary table:
+
+| Format | Memory vs FP16 | Accuracy Loss | Latency | Best For |
+|--------|---------------|---------------|---------|----------|
+| FP16/BF16 | 1× (baseline) | None | Lowest | Production servers, fine-tuning |
+| Q8 / INT8 | 2× smaller | <1% | Low | Real-time inference, enterprise |
+| Q4 / INT4 | 4× smaller | 1–3% | +30% single-token | Consumer hardware, high-throughput batch |
+| Q2 | 8× smaller | Significant (2.5–3.0 PPL increase) | Fastest | Extreme memory limits only[^43] |
+
+### 6.3 Quantization Formats: GGUF, GPTQ, and AWQ
+
+These are three different *implementations* of quantization, each with different tradeoffs:[^43][^44][^45]
+
+**GGUF** (successor to GGML): The dominant format for local deployment. Supports flexible block sizes (Q2 through Q8), works across CPU and GPU, and is natively supported by Ollama, llama.cpp, and LM Studio. The K-quant variants (Q4_K_M, Q5_K_M) use mixed precision within the quantization block, protecting more important weights. Q4_K_M is the community consensus "best balance" choice for local use.[^44]
+
+**GPTQ**: A Hessian-based post-training quantization method for GPU-only inference. Requires a calibration dataset (128-256 samples); takes 15-30 minutes for an 8B model. Produces a single tensor file, excellent throughput with ExLlama kernels, but needs calibration data quality and is harder to set up.[^43]
+
+**AWQ** (Activation-Aware Weight Quantization): Analyzes activation distributions to identify "salient" weights — the weights most critical to model output — and protects them at higher precision while quantizing less-critical weights to INT4. Results in better quality retention than GPTQ at the same bit width, with AWQ achieving approximately 0.7% accuracy drop vs. GPTQ's 2.8% on Llama 3.1 8B on HumanEval. Fastest inference via vLLM with the Marlin-AWQ kernel. No CPU inference support.[^44]
+
+**BitsAndBytes**: Dynamic quantization that runs at load time, no separate quantization step needed. Instant to apply, works directly in HuggingFace `transformers`. Lower throughput than AWQ/GPTQ but unbeatable for experimentation.[^43]
+
+**Deployment recommendation from empirical research**:[^41]
+- W4A16 (4-bit weights, 16-bit activations) → most cost-efficient for synchronous/streaming requests
+- W8A8 (8-bit weights and activations) → best for asynchronous continuous batching at high throughput
+
+### 6.4 VRAM Requirements by Model Size
+
+| Model Size | FP16 | Q8 | Q4 | Minimum GPU (Q8) | Minimum GPU (Q4) |
+|-----------|------|----|----|-------------------|-------------------|
+| 7B | 14–16 GB | 8–10 GB | 4–6 GB | RTX 3060 12GB | RTX 4060 8GB[^40] |
+| 13B | 26–30 GB | 15–18 GB | 10–14 GB | RTX 4090 24GB | RTX 3060 12GB[^40] |
+| 34B | 68–75 GB | 38–45 GB | 20–25 GB | A6000 48GB | RTX 4090 24GB[^40] |
+| 70B | 140–160 GB | 75–85 GB | 35–45 GB | Multi-GPU | 2× RTX 4090[^40] |
+
+#### Gemma 4 Specifically
+
+| Model | BF16 | Q8 | Q4_K_M | Recommended GPU for Q4 |
+|-------|------|-----|---------|------------------------|
+| E2B | 9.6 GB | — | 3.46 GB | RTX 3060 (4 GB VRAM) |
+| E4B | 15 GB | — | 5.41 GB | RTX 4060 (6 GB VRAM) |
+| 26B A4B (MoE) | 48 GB | 25 GB | ~14 GB | RTX 4080 16GB / RTX 4090[^46][^47] |
+| 31B Dense | 58–64 GB | 30 GB | ~18–20 GB | RTX 3090 / RTX 4090[^48][^46] |
+
+**Important caveat — context window overhead**: The numbers above cover weight loading only. A 31B model at Q4 on an RTX 4090 (24GB) maxes out at roughly 45K tokens of context before hitting the VRAM ceiling. To use the full 256K context window, you need ~40GB VRAM total — a 48GB workstation GPU, a dual-GPU setup, or an Apple Silicon Mac with 48GB+ unified memory.[^38]
+
+The 26B A4B MoE is the sweet spot for most local users: fits cleanly in 16GB VRAM at Q4, scales to the full 256K context on a 24GB RTX 4090, and delivers faster throughput than the 31B Dense.[^38]
+
+---
+
+## 7. The Cost of Quantization on Model Capabilities
+
+Quantization is not uniformly harmful — its effects are task-dependent.
+
+**Where quantization hurts most:**
+- **Multi-step reasoning** (math proofs, complex code): INT4 shows the largest relative degradation because small numerical errors compound through chain-of-thought steps
+- **Long context recall**: KV cache quantization (separate from weight quantization) can degrade long-document retrieval accuracy significantly
+- **Low-frequency knowledge**: Rarely-seen factual associations are more fragile and may be disrupted by weight quantization
+
+**Where quantization hurts least:**
+- **Language understanding / classification**: MMLU scores typically degrade less than 1% at Q8[^39]
+- **Code generation** (single-file): Largely robust at Q4_K_M; AWQ especially preserves this
+- **Instruction following**: Generally robust across formats
+
+**Perplexity increase as a proxy metric** — the GGUF format documentation exposes perplexity delta from baseline:[^43]
+
+| GGUF Format | Perplexity Increase (Llama 3.1 8B) |
+|-------------|-----------------------------------|
+| Q4_K_M | +0.3–0.5 |
+| Q5_K_M | +0.1–0.2 |
+| Q3_K_M | +1.0–1.5 |
+| Q2_K | +2.5–3.0 |
+
+Q4_K_M with <0.5 perplexity increase is the standard recommendation for local use. Q5_K_M is worth the extra VRAM when tasks involve complex reasoning or math.
+
+---
+
+## 8. Evaluating Tool Calling Proficiency
+
+Tool calling (function calling) quality is evaluated on multiple dimensions that go beyond "does it return valid JSON":
+
+1. **Tool Selection Accuracy**: Does the model pick the right tool from a set of available tools? Models can hallucinate tool names or call the wrong tool in multi-tool environments[^20]
+2. **Parameter Formatting**: Does the generated call conform to the JSON schema? Evaluated via AST comparison in BFCL[^19]
+3. **Relevance (Abstention)**: Does the model correctly identify when *no tool should be called* and answer directly?[^19]
+4. **Multi-turn Statefulness**: Does the model maintain context across multiple tool calls in a sequence? BFCL v3/v4 specifically test this[^20]
+5. **Parallel Calling**: Can the model correctly batch multiple independent tool calls in a single turn?
+6. **Error Recovery**: When a tool returns an error, does the model re-plan and retry appropriately?
+
+The τ²-bench result — a 25-point task success rate drop when moving from solo tool use to interactive dual-control — highlights that most benchmark scores for tool use are measured in sterile, controlled environments. Real production tool use involves dynamic, partially observable environments with users who make mistakes.[^24]
+
+**For evaluating a new model's tool calling:**
+1. Run it on BFCL v4 (check the Berkeley leaderboard)
+2. Manually test with your specific API schema — models can be well-calibrated on common patterns but poor on domain-specific tools
+3. Test multi-step sequences (5+ tool calls) — this is where models degrade noticeably
+4. Test abstention — send queries that should not trigger any tool and check for hallucinated calls
+
+---
+
+## 9. The Open vs. Frontier Closed-Source Gap
+
+As of April 2026, the best open-weight models score approximately **85** on key benchmarks where proprietary leaders score **94**. The gap is real but narrowing:[^6]
+
+| Category | Best Open-Weight | Best Proprietary |
+|----------|-----------------|-----------------|
+| Arena ELO (text) | Gemma 4 31B: 1452[^16] | Claude Opus 4.6: 1502[^7] |
+| GPQA Diamond | Qwen 3.5 27B: ~85.5%[^17] | GPT-5.2: 92.4%[^7] |
+| SWE-bench Verified | ~70–75% | Claude Opus 4.6: 80.8%[^7] |
+| HLE | ~20-25% | Claude Opus 4.6: 40%[^7] |
+
+For most production use cases, this gap manifests primarily in complex multi-step reasoning, hard scientific knowledge, and advanced software engineering tasks. For RAG systems, standard instruction following, structured extraction, and summarization, a well-quantized open-weight model at the 26-31B scale is often competitive with frontier closed-source models at a fraction of the cost and with full data privacy.
+
+---
+
+## 10. A Practical Decision Framework
+
+When a new model is released, work through this sequence:
+
+1. **Check the benchmark relevance**: Favor HLE, GPQA (if not saturated), LiveCodeBench, SWE-bench, Arena ELO, and task-specific agentic benchmarks over MMLU and HellaSwag
+2. **Assess hardware feasibility**: Apply `VRAM = params × bytes_per_param + context_overhead` to your available hardware
+3. **Identify quantization target**: If VRAM-constrained, Q4_K_M (GGUF) or AWQ 4-bit are the first stops; use Q8 if VRAM permits for tasks involving reasoning
+4. **Check MoE vs. Dense tradeoff**: MoE saves VRAM and improves throughput but complicates fine-tuning; Dense is safer for fine-tuning and more predictable in production
+5. **Verify ecosystem readiness**: Check HuggingFace Transformers support, vLLM integration, and llama.cpp GGUF availability — Gemma 4 launched with broken QLoRA precisely because architectural innovations require framework updates[^16]
+6. **Run your own eval**: 50-200 examples from your production distribution, evaluated with the same metrics you optimize for in production
+7. **Factor in license**: Apache 2.0 (Gemma 4, Qwen, Mistral) gives full commercial freedom; custom licenses (previous Gemma, Meta's Llama 4 Community license) require legal review for enterprise use[^29]
+
+---
+
+## References
+
+1. [Contamination Sensitivity and Score Confidence in LLM Benchmarks](https://arxiv.org/html/2603.21636v1)
+2. [[PDF] Benchmarking Large Language Models Under Data Contamination](https://aclanthology.org/2025.emnlp-main.511.pdf)
+3. [LLM Evaluation and Benchmarking Guide: Measuring What Actually ...](https://www.youngju.dev/blog/ai/2026-03-17-llm-evaluation-benchmark-guide.en)
+4. [2025 Year in Review for LLM Evaluation: When the Scorecard Broke](https://www.goodeyelabs.com/insights/llm-evaluation-2025-review)
+5. [Mapping IQ, MMLU, MMLU-Pro, GPQA, HLE - LifeArchitect.ai](https://lifearchitect.ai/mapping/)
+6. [State of LLM Benchmarks 2026: Rankings, Trends, and What ...](https://benchlm.ai/blog/posts/state-of-llm-benchmarks-2026)
+7. [LLM Selection & Benchmarks Guide (2026) - Iternal Technologies](https://iternal.ai/llm-selection-guide)
+8. [Gemma 4 - Google DeepMind](https://deepmind.google/models/gemma/gemma-4/)
+9. [LiveCodeBench: Holistic and Contamination Free Evaluation of ...](https://livecodebench.github.io)
+10. [LiveCodeBench: Holistic and Contamination Free Evaluation of ...](https://arxiv.org/abs/2403.07974)
+11. [Overview - SWE-bench](https://www.swebench.com/SWE-bench/)
+12. [Chatbot Arena and the Elo rating system - Part 1 - Yi Zhu](https://bryanyzhu.github.io/posts/2024-06-20-elo-part1/)
+13. [LMSYS Chatbot Arena ELO Ratings: The Ultimate AI Showdown ...](https://www.chatbench.org/lmsys-chatbot-arena-elo-ratings/)
+14. [Chatbot Arena Elo Rankings: Who Wins the Human Vote?](https://awesomeagents.ai/leaderboards/chatbot-arena-elo-rankings/)
+15. [How to Read the LMSYS Chatbot Arena Leaderboard (2026 Guide)](https://www.toolcenter.ai/zh/articles/how-to-read-lmsys-chatbot-arena-leaderboard)
+16. [Google's Gemma 4 Report: Benchmarks, License Shift & Developer Reality Check](https://www.youtube.com/watch?v=qJcKWlOhr50)
+17. [Gemma 4 vs Llama 4 vs Qwen 3.5: 2026 Comparison Guide](https://lushbinary.com/blog/gemma-4-vs-llama-4-vs-qwen-3-5-open-weight-model-comparison/)
+18. [Berkeley Function Calling Leaderboard (BFCL) V4 - Gorilla](https://gorilla.cs.berkeley.edu/leaderboard.html)
+19. [Berkeley Function Calling Leaderboard v4 - Emergent Mind](https://www.emergentmind.com/topics/berkeley-function-calling-leaderboard-v4-bfclv4)
+20. [Research: Benchmarks for Evaluating LLM Tool Use and Semantic ...](https://github.com/nexi-lab/nexus/issues/484)
+21. [A Comprehensive Survey of Benchmarks for Evaluating Tool and ...](https://huggingface.co/datasets/tuandunghcmut/BFCL_v4_information/blob/main/A%20Comprehensive%20Survey%20of%20Benchmarks%20for%20Evaluating%20Tool%20and%20Function%20Calling%20in%20Large%20Language%20Models.md)
+22. [$τ^2$-Bench: Evaluating Conversational Agents in a Dual- ...](https://arxiv.org/abs/2506.07982)
+23. [Tau²: From LLM Benchmark to Blueprint for Testing AI Agents](https://quesma.com/blog/tau2-from-llm-benchmark-to-blueprint-for-testing-ai-agents/)
+24. [𝜏²-bench](https://sierra.ai/uk/blog/benchmarking-agents-in-collaborative-real-world-scenarios)
+25. [Hugging Face Overhauls Open LLM Leaderboard with Tougher ...](https://www.deeplearning.ai/the-batch/hugging-face-overhauls-open-llm-leaderboard-with-tougher-benchmarks/)
+26. [leaderboards/docs/source/en/open_llm_leaderboard/archive.md at main · huggingface/leaderboards](https://github.com/huggingface/leaderboards/blob/main/docs/source/en/open_llm_leaderboard/archive.md)
+27. [Hugging Face Upgrades Open LLM Leaderboard v2 for Enhanced ...](https://www.infoq.com/news/2024/10/open-llm-leaderboard-v2-launch/)
+28. [Gemma 4: Our most capable open models to date - Google Blog](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/)
+29. [Google releases Gemma 4 under Apache 2.0 - VentureBeat](https://venturebeat.com/technology/google-releases-gemma-4-under-apache-2-0-and-that-license-change-may-matter)
+30. [Mixture of Experts (MoE) Explained: How Sparse Activation - GuruSup](https://gurusup.com/blog/mixture-of-experts-moe-explained)
+31. [Mixture of Experts (MoE) vs Dense LLMs](https://maximilian-schwarzmueller.com/articles/understanding-mixture-of-experts-moe-llms/)
+32. [Comparison with Dense Model Scaling - ApX Machine Learning](https://apxml.com/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/moe-vs-dense-model-scaling)
+33. [MoE vs AI dense models: How do they compare in inference?](https://epoch.ai/gradient-updates/moe-vs-dense-models-inference)
+34. [Challenges in MoE Training: Expert Collapse](https://apxml.com/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/moe-training-challenges)
+35. [MoE Load Balancing: Token Distribution & Expert Collapse](https://mbrenndoerfer.com/writing/moe-load-balancing-expert-collapse-token-distribution)
+36. [Adaptive-expert-weight-based load balance scheme for ...](https://www.frontiersin.org/journals/neurorobotics/articles/10.3389/fnbot.2025.1590994/full)
+37. [MoE Expert Specialization Collapse Prevention](https://apxml.com/courses/mixture-of-experts/chapter-3-moe-training-dynamics-optimization/expert-specialization-collapse)
+38. [Gemma 4 Hardware Requirements: RAM, VRAM, and Model Size ...](https://avenchat.com/blog/gemma-4-hardware-requirements)
+39. [Quantization Tradeoffs: 4-bit vs 8-bit vs FP16 in Production - Dasroot!](https://dasroot.net/posts/2026/02/quantization-tradeoffs-4-bit-8-bit-fp16-production/)
+40. [How Much VRAM Do You Really Need for LLMs? (7B–70B ...](https://mljourney.com/how-much-vram-do-you-really-need-for-llms-7b-70b-explained/)
+41. [“Give Me BF16 or Give Me Death”? Accuracy-Performance ...](https://arxiv.org/html/2411.02355v3)
+42. [“Give Me BF16 or Give Me Death”? Accuracy-Performance Trade-Offs in LLM Quantization](https://arxiv.org/html/2411.02355)
+43. [Complete LLM Quantization Comparison: GPTQ, AWQ, GGUF ...](https://www.youngju.dev/blog/llm/2026-03-06-llm-quantization-gptq-awq-gguf-comparison.en)
+44. [GGUF vs GPTQ vs AWQ Compared: Best Quantization 2026](https://localaimaster.com/blog/quantization-explained)
+45. [Demystifying LLM Quantization: GPTQ, AWQ, and GGUF ...](https://www.linkedin.com/pulse/demystifying-llm-quantization-gptq-awq-gguf-explained-xiao-fei-zhang-1lmbe)
+46. [Gemma 4 System Requirements: RAM, VRAM & Hardware Guide ...](https://www.aimoneytools.net/blog/gemma-4-system-requirements)
+47. [Gemma4 VRAM Guide: GPU Memory Requirements, Quantization ...](https://gemmai4.com/vram/)
+48. [Gemma 4 Memory Requirements: Complete Hardware Guide 2026](https://www.gemma4.wiki/requirements/gemma-4-memory-requirements)
