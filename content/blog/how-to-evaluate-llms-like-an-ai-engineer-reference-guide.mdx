@@ -161,7 +161,7 @@ In a standard **dense transformer**, every input token passes through every para
 
 This is called **sparse activation**. The total parameter count of an MoE layer is:
 
-\[\text{Parameters}_{\text{MoE}} = N_{\text{experts}} \times \text{Parameters}_{\text{expert}}\]
+`Parameters_MoE = N_experts × Parameters_expert`
 
 But the computational cost scales with only the *k* active experts, not with the full \(N_{\text{experts}}\). DeepSeek-V3 makes this concrete: 671B total parameters, 37B active per token — building a model with the knowledge capacity of a 671B model at roughly the inference cost of a 37B one.
 
@@ -177,15 +177,15 @@ The intended behavior of MoE is that different experts specialize on different t
 
 However, MoE models face a pathological failure mode during training called **expert collapse** (or routing collapse):
 
-1. Early in training, if expert A happens to perform slightly better on the initial batches, the router learns to prefer it
-2. Expert A receives more gradient signal, improves faster
-3. The feedback loop intensifies — the router becomes increasingly confident in expert A
-4. Other experts receive few or no tokens, fail to learn meaningful specializations, and become "dead" parameters
-5. The model degenerates into a smaller effective model with only a few active expert paths
+- Early in training, if expert A happens to perform slightly better on the initial batches, the router learns to prefer it
+- Expert A receives more gradient signal, improves faster
+- The feedback loop intensifies — the router becomes increasingly confident in expert A
+- Other experts receive few or no tokens, fail to learn meaningful specializations, and become "dead" parameters
+- The model degenerates into a smaller effective model with only a few active expert paths
 
 The solution is an **auxiliary load-balancing loss** added to the primary task loss:
 
-\[L_{\text{total}} = L_{\text{task}} + \alpha \cdot L_{\text{aux}}\]
+`L_total = L_task + α · L_aux`
 
 The auxiliary loss penalizes uneven expert utilization, forcing the router to distribute tokens. However, setting α too high causes the router to prioritize load balancing over task performance — it distributes tokens evenly but ignores whether the token is actually a good match for the expert. Finding the right α is an active research problem.
 
@@ -212,7 +212,7 @@ For an AI engineer deploying locally: if VRAM is the constraint, a quantized MoE
 
 Every parameter in an LLM is stored as a floating-point number. The number of bits used to represent it determines memory consumption per parameter:
 
-\[\text{VRAM} \approx (\text{Parameters} \times \text{bytes per parameter}) + \text{Overhead (KV cache, etc.)}\]
+`VRAM ≈ (Parameters × bytes_per_parameter) + overhead (KV cache, etc.)`
 
 - **FP32**: 4 bytes/param — only used for training, rarely inference
 - **BF16 / FP16**: 2 bytes/param — the "full precision" inference baseline
@@ -307,20 +307,20 @@ Q4_K_M with <0.5 perplexity increase is the standard recommendation for local us
 
 Tool calling (function calling) quality is evaluated on multiple dimensions that go beyond "does it return valid JSON":
 
-1. **Tool Selection Accuracy**: Does the model pick the right tool from a set of available tools? Models can hallucinate tool names or call the wrong tool in multi-tool environments
-2. **Parameter Formatting**: Does the generated call conform to the JSON schema? Evaluated via AST comparison in BFCL
-3. **Relevance (Abstention)**: Does the model correctly identify when *no tool should be called* and answer directly?
-4. **Multi-turn Statefulness**: Does the model maintain context across multiple tool calls in a sequence? BFCL v3/v4 specifically test this
-5. **Parallel Calling**: Can the model correctly batch multiple independent tool calls in a single turn?
-6. **Error Recovery**: When a tool returns an error, does the model re-plan and retry appropriately?
+- **Tool Selection Accuracy**: Does the model pick the right tool from a set of available tools? Models can hallucinate tool names or call the wrong tool in multi-tool environments
+- **Parameter Formatting**: Does the generated call conform to the JSON schema? Evaluated via AST comparison in BFCL
+- **Relevance (Abstention)**: Does the model correctly identify when *no tool should be called* and answer directly?
+- **Multi-turn Statefulness**: Does the model maintain context across multiple tool calls in a sequence? BFCL v3/v4 specifically test this
+- **Parallel Calling**: Can the model correctly batch multiple independent tool calls in a single turn?
+- **Error Recovery**: When a tool returns an error, does the model re-plan and retry appropriately?
 
 The τ²-bench result — a 25-point task success rate drop when moving from solo tool use to interactive dual-control — highlights that most benchmark scores for tool use are measured in sterile, controlled environments. Real production tool use involves dynamic, partially observable environments with users who make mistakes.
 
 **For evaluating a new model's tool calling:**
-1. Run it on BFCL v4 (check the Berkeley leaderboard)
-2. Manually test with your specific API schema — models can be well-calibrated on common patterns but poor on domain-specific tools
-3. Test multi-step sequences (5+ tool calls) — this is where models degrade noticeably
-4. Test abstention — send queries that should not trigger any tool and check for hallucinated calls
+- Run it on BFCL v4 (check the Berkeley leaderboard)
+- Manually test with your specific API schema — models can be well-calibrated on common patterns but poor on domain-specific tools
+- Test multi-step sequences (5+ tool calls) — this is where models degrade noticeably
+- Test abstention — send queries that should not trigger any tool and check for hallucinated calls
 
 ---
 
@@ -343,63 +343,63 @@ For most production use cases, this gap manifests primarily in complex multi-ste
 
 When a new model is released, work through this sequence:
 
-1. **Check the benchmark relevance**: Favor HLE, GPQA (if not saturated), LiveCodeBench, SWE-bench, Arena ELO, and task-specific agentic benchmarks over MMLU and HellaSwag
-2. **Assess hardware feasibility**: Apply `VRAM = params × bytes_per_param + context_overhead` to your available hardware
-3. **Identify quantization target**: If VRAM-constrained, Q4_K_M (GGUF) or AWQ 4-bit are the first stops; use Q8 if VRAM permits for tasks involving reasoning
-4. **Check MoE vs. Dense tradeoff**: MoE saves VRAM and improves throughput but complicates fine-tuning; Dense is safer for fine-tuning and more predictable in production
-5. **Verify ecosystem readiness**: Check HuggingFace Transformers support, vLLM integration, and llama.cpp GGUF availability — Gemma 4 launched with broken QLoRA precisely because architectural innovations require framework updates
-6. **Run your own eval**: 50-200 examples from your production distribution, evaluated with the same metrics you optimize for in production
-7. **Factor in license**: Apache 2.0 (Gemma 4, Qwen, Mistral) gives full commercial freedom; custom licenses (previous Gemma, Meta's Llama 4 Community license) require legal review for enterprise use
+- **Check the benchmark relevance**: Favor HLE, GPQA (if not saturated), LiveCodeBench, SWE-bench, Arena ELO, and task-specific agentic benchmarks over MMLU and HellaSwag
+- **Assess hardware feasibility**: Apply `VRAM = params × bytes_per_param + context_overhead` to your available hardware
+- **Identify quantization target**: If VRAM-constrained, Q4_K_M (GGUF) or AWQ 4-bit are the first stops; use Q8 if VRAM permits for tasks involving reasoning
+- **Check MoE vs. Dense tradeoff**: MoE saves VRAM and improves throughput but complicates fine-tuning; Dense is safer for fine-tuning and more predictable in production
+- **Verify ecosystem readiness**: Check HuggingFace Transformers support, vLLM integration, and llama.cpp GGUF availability — Gemma 4 launched with broken QLoRA precisely because architectural innovations require framework updates
+- **Run your own eval**: 50-200 examples from your production distribution, evaluated with the same metrics you optimize for in production
+- **Factor in license**: Apache 2.0 (Gemma 4, Qwen, Mistral) gives full commercial freedom; custom licenses (previous Gemma, Meta's Llama 4 Community license) require legal review for enterprise use
 
 ---
 
 ## References
 
-1. [Contamination Sensitivity and Score Confidence in LLM Benchmarks](https://arxiv.org/html/2603.21636v1)
-2. [[PDF] Benchmarking Large Language Models Under Data Contamination](https://aclanthology.org/2025.emnlp-main.511.pdf)
-3. [LLM Evaluation and Benchmarking Guide: Measuring What Actually ...](https://www.youngju.dev/blog/ai/2026-03-17-llm-evaluation-benchmark-guide.en)
-4. [2025 Year in Review for LLM Evaluation: When the Scorecard Broke](https://www.goodeyelabs.com/insights/llm-evaluation-2025-review)
-5. [Mapping IQ, MMLU, MMLU-Pro, GPQA, HLE - LifeArchitect.ai](https://lifearchitect.ai/mapping/)
-6. [State of LLM Benchmarks 2026: Rankings, Trends, and What ...](https://benchlm.ai/blog/posts/state-of-llm-benchmarks-2026)
-7. [LLM Selection & Benchmarks Guide (2026) - Iternal Technologies](https://iternal.ai/llm-selection-guide)
-8. [Gemma 4 - Google DeepMind](https://deepmind.google/models/gemma/gemma-4/)
-9. [LiveCodeBench: Holistic and Contamination Free Evaluation of ...](https://livecodebench.github.io)
-10. [LiveCodeBench: Holistic and Contamination Free Evaluation of ...](https://arxiv.org/abs/2403.07974)
-11. [Overview - SWE-bench](https://www.swebench.com/SWE-bench/)
-12. [Chatbot Arena and the Elo rating system - Part 1 - Yi Zhu](https://bryanyzhu.github.io/posts/2024-06-20-elo-part1/)
-13. [LMSYS Chatbot Arena ELO Ratings: The Ultimate AI Showdown ...](https://www.chatbench.org/lmsys-chatbot-arena-elo-ratings/)
-14. [Chatbot Arena Elo Rankings: Who Wins the Human Vote?](https://awesomeagents.ai/leaderboards/chatbot-arena-elo-rankings/)
-15. [How to Read the LMSYS Chatbot Arena Leaderboard (2026 Guide)](https://www.toolcenter.ai/zh/articles/how-to-read-lmsys-chatbot-arena-leaderboard)
-16. [Google's Gemma 4 Report: Benchmarks, License Shift & Developer Reality Check](https://www.youtube.com/watch?v=qJcKWlOhr50)
-17. [Gemma 4 vs Llama 4 vs Qwen 3.5: 2026 Comparison Guide](https://lushbinary.com/blog/gemma-4-vs-llama-4-vs-qwen-3-5-open-weight-model-comparison/)
-18. [Berkeley Function Calling Leaderboard (BFCL) V4 - Gorilla](https://gorilla.cs.berkeley.edu/leaderboard.html)
-19. [Berkeley Function Calling Leaderboard v4 - Emergent Mind](https://www.emergentmind.com/topics/berkeley-function-calling-leaderboard-v4-bfclv4)
-20. [Research: Benchmarks for Evaluating LLM Tool Use and Semantic ...](https://github.com/nexi-lab/nexus/issues/484)
-21. [A Comprehensive Survey of Benchmarks for Evaluating Tool and ...](https://huggingface.co/datasets/tuandunghcmut/BFCL_v4_information/blob/main/A%20Comprehensive%20Survey%20of%20Benchmarks%20for%20Evaluating%20Tool%20and%20Function%20Calling%20in%20Large%20Language%20Models.md)
-22. [$τ^2$-Bench: Evaluating Conversational Agents in a Dual- ...](https://arxiv.org/abs/2506.07982)
-23. [Tau²: From LLM Benchmark to Blueprint for Testing AI Agents](https://quesma.com/blog/tau2-from-llm-benchmark-to-blueprint-for-testing-ai-agents/)
-24. [𝜏²-bench](https://sierra.ai/uk/blog/benchmarking-agents-in-collaborative-real-world-scenarios)
-25. [Hugging Face Overhauls Open LLM Leaderboard with Tougher ...](https://www.deeplearning.ai/the-batch/hugging-face-overhauls-open-llm-leaderboard-with-tougher-benchmarks/)
-26. [leaderboards/docs/source/en/open_llm_leaderboard/archive.md at main · huggingface/leaderboards](https://github.com/huggingface/leaderboards/blob/main/docs/source/en/open_llm_leaderboard/archive.md)
-27. [Hugging Face Upgrades Open LLM Leaderboard v2 for Enhanced ...](https://www.infoq.com/news/2024/10/open-llm-leaderboard-v2-launch/)
-28. [Gemma 4: Our most capable open models to date - Google Blog](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/)
-29. [Google releases Gemma 4 under Apache 2.0 - VentureBeat](https://venturebeat.com/technology/google-releases-gemma-4-under-apache-2-0-and-that-license-change-may-matter)
-30. [Mixture of Experts (MoE) Explained: How Sparse Activation - GuruSup](https://gurusup.com/blog/mixture-of-experts-moe-explained)
-31. [Mixture of Experts (MoE) vs Dense LLMs](https://maximilian-schwarzmueller.com/articles/understanding-mixture-of-experts-moe-llms/)
-32. [Comparison with Dense Model Scaling - ApX Machine Learning](https://apxml.com/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/moe-vs-dense-model-scaling)
-33. [MoE vs AI dense models: How do they compare in inference?](https://epoch.ai/gradient-updates/moe-vs-dense-models-inference)
-34. [Challenges in MoE Training: Expert Collapse](https://apxml.com/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/moe-training-challenges)
-35. [MoE Load Balancing: Token Distribution & Expert Collapse](https://mbrenndoerfer.com/writing/moe-load-balancing-expert-collapse-token-distribution)
-36. [Adaptive-expert-weight-based load balance scheme for ...](https://www.frontiersin.org/journals/neurorobotics/articles/10.3389/fnbot.2025.1590994/full)
-37. [MoE Expert Specialization Collapse Prevention](https://apxml.com/courses/mixture-of-experts/chapter-3-moe-training-dynamics-optimization/expert-specialization-collapse)
-38. [Gemma 4 Hardware Requirements: RAM, VRAM, and Model Size ...](https://avenchat.com/blog/gemma-4-hardware-requirements)
-39. [Quantization Tradeoffs: 4-bit vs 8-bit vs FP16 in Production - Dasroot!](https://dasroot.net/posts/2026/02/quantization-tradeoffs-4-bit-8-bit-fp16-production/)
-40. [How Much VRAM Do You Really Need for LLMs? (7B–70B ...](https://mljourney.com/how-much-vram-do-you-really-need-for-llms-7b-70b-explained/)
-41. [“Give Me BF16 or Give Me Death”? Accuracy-Performance ...](https://arxiv.org/html/2411.02355v3)
-42. [“Give Me BF16 or Give Me Death”? Accuracy-Performance Trade-Offs in LLM Quantization](https://arxiv.org/html/2411.02355)
-43. [Complete LLM Quantization Comparison: GPTQ, AWQ, GGUF ...](https://www.youngju.dev/blog/llm/2026-03-06-llm-quantization-gptq-awq-gguf-comparison.en)
-44. [GGUF vs GPTQ vs AWQ Compared: Best Quantization 2026](https://localaimaster.com/blog/quantization-explained)
-45. [Demystifying LLM Quantization: GPTQ, AWQ, and GGUF ...](https://www.linkedin.com/pulse/demystifying-llm-quantization-gptq-awq-gguf-explained-xiao-fei-zhang-1lmbe)
-46. [Gemma 4 System Requirements: RAM, VRAM & Hardware Guide ...](https://www.aimoneytools.net/blog/gemma-4-system-requirements)
-47. [Gemma4 VRAM Guide: GPU Memory Requirements, Quantization ...](https://gemmai4.com/vram/)
-48. [Gemma 4 Memory Requirements: Complete Hardware Guide 2026](https://www.gemma4.wiki/requirements/gemma-4-memory-requirements)
+- [Contamination Sensitivity and Score Confidence in LLM Benchmarks](https://arxiv.org/html/2603.21636v1)
+- [[PDF] Benchmarking Large Language Models Under Data Contamination](https://aclanthology.org/2025.emnlp-main.511.pdf)
+- [LLM Evaluation and Benchmarking Guide: Measuring What Actually ...](https://www.youngju.dev/blog/ai/2026-03-17-llm-evaluation-benchmark-guide.en)
+- [2025 Year in Review for LLM Evaluation: When the Scorecard Broke](https://www.goodeyelabs.com/insights/llm-evaluation-2025-review)
+- [Mapping IQ, MMLU, MMLU-Pro, GPQA, HLE - LifeArchitect.ai](https://lifearchitect.ai/mapping/)
+- [State of LLM Benchmarks 2026: Rankings, Trends, and What ...](https://benchlm.ai/blog/posts/state-of-llm-benchmarks-2026)
+- [LLM Selection & Benchmarks Guide (2026) - Iternal Technologies](https://iternal.ai/llm-selection-guide)
+- [Gemma 4 - Google DeepMind](https://deepmind.google/models/gemma/gemma-4/)
+- [LiveCodeBench: Holistic and Contamination Free Evaluation of ...](https://livecodebench.github.io)
+- [LiveCodeBench: Holistic and Contamination Free Evaluation of ...](https://arxiv.org/abs/2403.07974)
+- [Overview - SWE-bench](https://www.swebench.com/SWE-bench/)
+- [Chatbot Arena and the Elo rating system - Part 1 - Yi Zhu](https://bryanyzhu.github.io/posts/2024-06-20-elo-part1/)
+- [LMSYS Chatbot Arena ELO Ratings: The Ultimate AI Showdown ...](https://www.chatbench.org/lmsys-chatbot-arena-elo-ratings/)
+- [Chatbot Arena Elo Rankings: Who Wins the Human Vote?](https://awesomeagents.ai/leaderboards/chatbot-arena-elo-rankings/)
+- [How to Read the LMSYS Chatbot Arena Leaderboard (2026 Guide)](https://www.toolcenter.ai/zh/articles/how-to-read-lmsys-chatbot-arena-leaderboard)
+- [Google's Gemma 4 Report: Benchmarks, License Shift & Developer Reality Check](https://www.youtube.com/watch?v=qJcKWlOhr50)
+- [Gemma 4 vs Llama 4 vs Qwen 3.5: 2026 Comparison Guide](https://lushbinary.com/blog/gemma-4-vs-llama-4-vs-qwen-3-5-open-weight-model-comparison/)
+- [Berkeley Function Calling Leaderboard (BFCL) V4 - Gorilla](https://gorilla.cs.berkeley.edu/leaderboard.html)
+- [Berkeley Function Calling Leaderboard v4 - Emergent Mind](https://www.emergentmind.com/topics/berkeley-function-calling-leaderboard-v4-bfclv4)
+- [Research: Benchmarks for Evaluating LLM Tool Use and Semantic ...](https://github.com/nexi-lab/nexus/issues/484)
+- [A Comprehensive Survey of Benchmarks for Evaluating Tool and ...](https://huggingface.co/datasets/tuandunghcmut/BFCL_v4_information/blob/main/A%20Comprehensive%20Survey%20of%20Benchmarks%20for%20Evaluating%20Tool%20and%20Function%20Calling%20in%20Large%20Language%20Models.md)
+- [$τ^2$-Bench: Evaluating Conversational Agents in a Dual- ...](https://arxiv.org/abs/2506.07982)
+- [Tau²: From LLM Benchmark to Blueprint for Testing AI Agents](https://quesma.com/blog/tau2-from-llm-benchmark-to-blueprint-for-testing-ai-agents/)
+- [𝜏²-bench](https://sierra.ai/uk/blog/benchmarking-agents-in-collaborative-real-world-scenarios)
+- [Hugging Face Overhauls Open LLM Leaderboard with Tougher ...](https://www.deeplearning.ai/the-batch/hugging-face-overhauls-open-llm-leaderboard-with-tougher-benchmarks/)
+- [leaderboards/docs/source/en/open_llm_leaderboard/archive.md at main · huggingface/leaderboards](https://github.com/huggingface/leaderboards/blob/main/docs/source/en/open_llm_leaderboard/archive.md)
+- [Hugging Face Upgrades Open LLM Leaderboard v2 for Enhanced ...](https://www.infoq.com/news/2024/10/open-llm-leaderboard-v2-launch/)
+- [Gemma 4: Our most capable open models to date - Google Blog](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/)
+- [Google releases Gemma 4 under Apache 2.0 - VentureBeat](https://venturebeat.com/technology/google-releases-gemma-4-under-apache-2-0-and-that-license-change-may-matter)
+- [Mixture of Experts (MoE) Explained: How Sparse Activation - GuruSup](https://gurusup.com/blog/mixture-of-experts-moe-explained)
+- [Mixture of Experts (MoE) vs Dense LLMs](https://maximilian-schwarzmueller.com/articles/understanding-mixture-of-experts-moe-llms/)
+- [Comparison with Dense Model Scaling - ApX Machine Learning](https://apxml.com/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/moe-vs-dense-model-scaling)
+- [MoE vs AI dense models: How do they compare in inference?](https://epoch.ai/gradient-updates/moe-vs-dense-models-inference)
+- [Challenges in MoE Training: Expert Collapse](https://apxml.com/courses/mixture-of-experts-advanced-implementation/chapter-1-foundations-of-moe-models/moe-training-challenges)
+- [MoE Load Balancing: Token Distribution & Expert Collapse](https://mbrenndoerfer.com/writing/moe-load-balancing-expert-collapse-token-distribution)
+- [Adaptive-expert-weight-based load balance scheme for ...](https://www.frontiersin.org/journals/neurorobotics/articles/10.3389/fnbot.2025.1590994/full)
+- [MoE Expert Specialization Collapse Prevention](https://apxml.com/courses/mixture-of-experts/chapter-3-moe-training-dynamics-optimization/expert-specialization-collapse)
+- [Gemma 4 Hardware Requirements: RAM, VRAM, and Model Size ...](https://avenchat.com/blog/gemma-4-hardware-requirements)
+- [Quantization Tradeoffs: 4-bit vs 8-bit vs FP16 in Production - Dasroot!](https://dasroot.net/posts/2026/02/quantization-tradeoffs-4-bit-8-bit-fp16-production/)
+- [How Much VRAM Do You Really Need for LLMs? (7B–70B ...](https://mljourney.com/how-much-vram-do-you-really-need-for-llms-7b-70b-explained/)
+- [“Give Me BF16 or Give Me Death”? Accuracy-Performance ...](https://arxiv.org/html/2411.02355v3)
+- [“Give Me BF16 or Give Me Death”? Accuracy-Performance Trade-Offs in LLM Quantization](https://arxiv.org/html/2411.02355)
+- [Complete LLM Quantization Comparison: GPTQ, AWQ, GGUF ...](https://www.youngju.dev/blog/llm/2026-03-06-llm-quantization-gptq-awq-gguf-comparison.en)
+- [GGUF vs GPTQ vs AWQ Compared: Best Quantization 2026](https://localaimaster.com/blog/quantization-explained)
+- [Demystifying LLM Quantization: GPTQ, AWQ, and GGUF ...](https://www.linkedin.com/pulse/demystifying-llm-quantization-gptq-awq-gguf-explained-xiao-fei-zhang-1lmbe)
+- [Gemma 4 System Requirements: RAM, VRAM & Hardware Guide ...](https://www.aimoneytools.net/blog/gemma-4-system-requirements)
+- [Gemma4 VRAM Guide: GPU Memory Requirements, Quantization ...](https://gemmai4.com/vram/)
+- [Gemma 4 Memory Requirements: Complete Hardware Guide 2026](https://www.gemma4.wiki/requirements/gemma-4-memory-requirements)
