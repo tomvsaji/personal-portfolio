@@ -1,3 +1,5 @@
+> Historical verification record. Current session transport and preview deployment instructions are in [CHATBOT_PREVIEW.md](CHATBOT_PREVIEW.md). Older direct-CORS and browser-history descriptions below are superseded.
+
 # Release verification — native portfolio chatbot
 
 ## Scope

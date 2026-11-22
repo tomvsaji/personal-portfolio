@@ -28,3 +28,41 @@ describe('chat protocol', () => {
   it('sends only the last eight bounded successful messages', () => { const messages = Array.from({length: 12}, (_, i) => ({role: i % 2 ? 'assistant' : 'user', content: `${i}` + 'x'.repeat(900), sources: []})); const history = boundedHistory(messages); expect(history).toHaveLength(8); expect(history[0].content.startsWith('4')).toBe(true); expect(history.every(m => m.content.length === 800 && !m.sources)).toBe(true) })
   it('honors seconds and HTTP date Retry-After', () => { expect(retryDelay('12')).toBe(12); expect(retryDelay(new Date(Date.now() + 20000).toUTCString())).toBeGreaterThanOrEqual(19) })
 })
+describe('response usage metadata and current stream events', () => {
+  const metrics = {model:'gpt-4.1-mini', elapsed_ms:124, model_calls:2, model_time_ms:100, search_calls:1, search_time_ms:12, prompt_tokens:40, completion_tokens:10, total_tokens:50, usage_complete:true, usage_source:'runtime', tokens_per_second:100}
+  const fixture = payload => `event: final\ndata: ${JSON.stringify(payload)}\n\nevent: done\ndata: {}\n\n`
+  it('retains only validated optional metrics from final and JSON results', async () => {
+    const { normalizeChatResult } = await import('../lib/chat-client.mjs')
+    const payload = {answer:'Answer', sources:[], metrics:{...metrics, secret:'do-not-render', url:'https://evil.test'}}
+    assert.deepEqual((await readChatStream(stream(fixture(payload)))).metrics, metrics)
+    assert.deepEqual(normalizeChatResult(payload).metrics, metrics)
+    assert.equal(normalizeChatResult({answer:'Old answer', sources:[]}).metrics, null)
+  })
+  it('drops malformed or oversized metrics without losing the answer and never estimates incomplete usage', async () => {
+    for (const bad of [null, [], 'raw', {...metrics,elapsed_ms:-1}, {...metrics,model_calls:1.5}, {...metrics,total_tokens:-2}, {...metrics,usage_complete:'yes'}, {...metrics,model:'https://secret.test/key'}, {...metrics,model:'sk-private-secret'}, {...metrics,extra:'x'.repeat(5000)}, {...metrics,model_time_ms:Infinity}]) {
+      const { normalizeChatResult } = await import('../lib/chat-client.mjs')
+      const result = normalizeChatResult({answer:'Answer',sources:[],metrics:bad})
+      assert.equal(result.answer,'Answer'); assert.equal(result.metrics,null)
+    }
+    const result = await readChatStream(stream(fixture({answer:'Answer',sources:[],metrics:{...metrics,usage_complete:false,usage_source:'unavailable',prompt_tokens:null,completion_tokens:null,total_tokens:null,tokens_per_second:null}})))
+    assert.equal(result.metrics.total_tokens,null); assert.equal(result.metrics.elapsed_ms,124)
+  })
+  it('supports delta and legacy claim events while preserving authoritative final content', async () => {
+    const events = []
+    const result = await readChatStream(stream('event: delta\ndata: {"text":"Partial **"}\n\nevent: claim\ndata: {"text":"legacy"}\n\n' + fixture({answer:'Final answer',sources:[]})), (kind,payload) => {if (['delta','claim'].includes(kind)) events.push(payload.text)})
+    assert.deepEqual(events,['Partial **','legacy']); assert.equal(result.answer,'Final answer')
+    for (const text of [42, null, 'x'.repeat(24001)]) await assert.rejects(readChatStream(stream(`event: delta\ndata: ${JSON.stringify({text})}\n\n` + fixture({answer:'Final',sources:[]}))), /incomplete or invalid/)
+  })
+})
+it('accepts short public runtime model tags but drops URLs, credentials, and oversized metadata strings', async () => {
+  const { normalizeMetrics } = await import('../lib/chat-client.mjs')
+  const metrics = {model:'qwen2.5:3b',elapsed_ms:5,model_calls:1,model_time_ms:4,search_calls:0,search_time_ms:0,prompt_tokens:null,completion_tokens:null,total_tokens:null,usage_complete:false,usage_source:'unavailable',tokens_per_second:null}
+  assert.equal(normalizeMetrics(metrics)?.model,'qwen2.5:3b')
+  for (const model of ['https://tomvsaji.com/private','gpt-4:password@secret','sk-private-secret','x'.repeat(100)]) assert.equal(normalizeMetrics({...metrics,model}),null)
+})
+it('bounds untrusted source metadata without coercing objects into display strings or URLs', async () => {
+  const { normalizeChatResult } = await import('../lib/chat-client.mjs')
+  const source = {number:{toString:'invalid'},title:{secret:'no'},heading:'h'.repeat(300),url:'https://tomvsaji.com/' + 'x'.repeat(3000)}
+  const result = normalizeChatResult({answer:'Safe answer',sources:[source]})
+  assert.deepEqual(result.sources,[{number:'',title:'Source',heading:'h'.repeat(240),url:null}])
+})

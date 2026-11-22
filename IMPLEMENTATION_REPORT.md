@@ -1,3 +1,5 @@
+> Historical verification record. Current session transport and preview deployment instructions are in [CHATBOT_PREVIEW.md](CHATBOT_PREVIEW.md). Older direct-CORS and browser-history descriptions below are superseded.
+
 # Native portfolio chat implementation
 
 Implemented locally on `feat/native-chatbot` in `/home/hermes/projects/personal-portfolio`. This worker performed no push, commit, deployment, auth changes, external messages, live inference, or writes to `/srv`. Parent live-inference verification is recorded below. `/srv/site-chatbot/static/style.css` was read only as the requested visual reference. No AGENTS.md was found by the project/parent search. Session: `01a1c484-8463-7bb1-a01e-d90be4c0a814`.

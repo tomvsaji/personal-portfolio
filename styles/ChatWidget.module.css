@@ -73,3 +73,36 @@
 }
 @media (max-height: 540px) { .panel { height: calc(var(--chat-viewport-height, 100dvh) - 88px); } .intro { display: none; } .privacy { display: none; } }
 @media (prefers-reduced-motion: reduce) { .widget *, .transcript { scroll-behavior: auto; animation: none; transition: none; } }
+/* Untrusted answer content stays inside the transcript at every viewport size. */
+.widget summary:focus-visible { outline: 2px solid var(--chat-ink); outline-offset: 3px; }
+.markdown { min-width: 0; overflow-wrap: anywhere; }
+.markdown p { white-space: normal; margin: .7em 0; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown :is(ul, ol) { margin: .7em 0; padding-left: 1.5em; }
+.markdown ul { list-style: disc; }
+.markdown ol { list-style: decimal; }
+.markdown li { margin: .3em 0; }
+.markdown :is(h1, h2, h3, h4, h5, h6) { font-size: 1em; font-weight: 700; margin: 1em 0 .4em; }
+.markdown a, .sourceJump { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.markdown code { font: .9em/1.5 ui-monospace, monospace; background: var(--chat-soft); padding: .1em .3em; border-radius: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.markdown pre { max-width: 100%; overflow-x: auto; padding: 10px; border: 1px solid var(--chat-line); border-radius: 8px; margin: .8em 0; }
+.markdown pre code { white-space: pre; overflow-wrap: normal; padding: 0; background: none; }
+.markdown blockquote { margin: .8em 0; padding-left: 12px; border-left: 2px solid var(--chat-line); color: var(--chat-muted); }
+.markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; margin: .8em 0; }
+.markdown :is(th, td) { padding: 6px 8px; border: 1px solid var(--chat-line); }
+.markdown input { pointer-events: none; }
+.message { min-width: 0; }
+.sourceJump { display: block; width: fit-content; font-size: 12px; margin-bottom: 10px; }
+.sourceNotice { font-size: 11px; color: var(--chat-muted); margin-bottom: 10px; }
+.sourceSection { margin-top: 16px; border-top: 1px solid var(--chat-line); padding-top: 12px; scroll-margin-top: 12px; }
+.sourceSection h4 { font-size: 12px; font-weight: 650; }
+.sources { display: grid; font-family: inherit; font-size: 12px; line-height: 1.5; padding: 0; margin-top: 8px; }
+.sources a, .sources li > span { padding: 8px 10px; }
+.widget :global(.chat-new-tab) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.geekStats { margin-top: 14px; border-top: 1px solid var(--chat-line); padding-top: 10px; font-size: 11px; color: var(--chat-muted); }
+.geekStats summary { cursor: pointer; width: fit-content; padding: 4px 0; color: var(--chat-ink); }
+.geekStats dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 5px 12px; margin: 10px 0; }
+.geekStats :is(dt, dd) { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.geekStats dd { text-align: right; font-variant-numeric: tabular-nums; }
+.geekStats p { white-space: normal; font-size: 10px; margin: 8px 0 0; }

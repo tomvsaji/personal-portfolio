@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Script from 'next/script'
 import { createChatSession } from '../lib/chat-session.mjs'
+import { AssistantMarkdown, AssistantResponse } from '../lib/chat-response.mjs'
 import { createChatFocus } from '../lib/chat-focus.mjs'
 import styles from '../styles/ChatWidget.module.css'
 
@@ -46,13 +47,13 @@ export default function ChatWidget() {
   const [now, setNow] = useState(Date.now())
   const [focusRequest, setFocusRequest] = useState(0)
   const session = useRef(null)
-  if (!session.current) session.current = createChatSession({base: process.env.NEXT_PUBLIC_CHATBOT_API_BASE_URL, verificationRequired: !!SITE_KEY})
+  if (!session.current) session.current = createChatSession({verificationRequired: !!SITE_KEY})
   const root = useRef(null), panel = useRef(null)
   const launcher = useRef(null), input = useRef(null), transcript = useRef(null), resetVerification = useRef(null)
   const locked = useRef(false), generation = useRef(0), alive = useRef(true), focusLifecycle = useRef(null)
   const remaining = Math.max(0, Math.ceil((retryUntil - now) / 1000))
   const busy = pending !== null
-  useEffect(() => { alive.current = true; return () => { alive.current = false; generation.current++; session.current.clear() } }, [])
+  useEffect(() => { alive.current = true; return () => { alive.current = false; generation.current++; session.current.cancel() } }, [])
   useEffect(() => {
     const viewport = window.visualViewport
     if (!open || !viewport) return
@@ -88,10 +89,21 @@ export default function ChatWidget() {
   useEffect(() => { if (!retryUntil) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [retryUntil])
   useEffect(() => { const el = transcript.current; if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight }, [messages, pending, claims])
   function close() { focusLifecycle.current?.reset(); setOpen(false); launcher.current?.focus() }
-  function clear() {
+  async function clear() {
+    if (locked.current) return
     focusLifecycle.current?.begin(document.activeElement); setFocusRequest(previous => previous + 1)
-    generation.current++; session.current.clear(); locked.current = false
-    setMessages([]); setPending(null); setClaims(''); setQuestion(''); setNotice(''); setStatus(''); setAnnouncement('Conversation cleared.'); resetVerification.current?.()
+    locked.current = true
+    const current = ++generation.current
+    setPending(''); setNotice(''); setStatus('Clearing conversation…')
+    try {
+      await session.current.clear(token)
+      if (!alive.current || current !== generation.current) return
+      setMessages([]); setClaims(''); setQuestion(''); setAnnouncement('Conversation cleared.')
+    } catch (error) {
+      if (alive.current && current === generation.current) setNotice(error.message || 'Conversation could not be cleared. Please try again.')
+    } finally {
+      if (alive.current && current === generation.current) { locked.current = false; setPending(null); setStatus(''); resetVerification.current?.() }
+    }
   }
   async function submit(value) {
     const text = value.trim()
@@ -106,10 +118,11 @@ export default function ChatWidget() {
       const result = await session.current.send(text, freshToken, (kind, payload) => {
         if (!alive.current || current !== generation.current) return
         if (kind === 'status') setStatus(payload.message)
+        if (kind === 'delta') setClaims(previous => previous + payload.text)
         if (kind === 'claim') setClaims(previous => previous + (previous ? '\n\n' : '') + payload.text)
       })
       if (!alive.current || current !== generation.current) return
-      setMessages(previous => [...previous, {role:'user', content:text}, {role:'assistant', content:result.answer, sources:result.sources}].slice(-24))
+      setMessages(previous => [...previous, {id:`${current}-user`, role:'user', content:text}, {id:`${current}-assistant`, role:'assistant', content:result.answer, sources:result.sources, metrics:result.metrics, clientElapsedMs:result.clientElapsedMs}].slice(-24))
       setAnnouncement('Answer ready. Review the conversation and sources.')
     } catch (error) {
       if (!alive.current || current !== generation.current) return
@@ -127,14 +140,14 @@ export default function ChatWidget() {
       <header className={styles.header}>
         <span className={styles.avatar} aria-hidden="true">TVS</span>
         <div className={styles.identity}><h2 id="tom-chat-title">Ask about Tom</h2><p>AI guide to his work & experience</p></div>
-        <button type="button" className={styles.quiet} onClick={clear}>Clear</button>
+        <button type="button" className={styles.quiet} onClick={clear} disabled={busy}>Clear</button>
         <button type="button" className={styles.close} aria-label="Close chat" onClick={close}>×</button>
       </header>
       <div className={styles.transcript} ref={transcript} role="region" aria-label="Conversation" tabIndex={0}>
         <div className={styles.intro}><span className={styles.eyebrow}>TOM’S PORTFOLIO / AI GUIDE</span><h3>Get to know the work.</h3><p>Explore Tom’s AI projects, engineering experience and writing, grounded in his published profile.</p></div>
         {messages.length === 0 && !busy && <div className={styles.suggestions}>{SUGGESTIONS.map(text => <button key={text} type="button" disabled={remaining > 0 || (!!SITE_KEY && !token)} onClick={() => submit(text)}>{text}<span aria-hidden="true"> ↗</span></button>)}</div>}
-        {messages.map((message, index) => <article key={index} className={`${styles.message} ${message.role === 'user' ? styles.user : ''}`} aria-label={message.role === 'user' ? 'You' : 'Portfolio guide'}><span className={styles.messageLabel}>{message.role === 'user' ? 'YOU' : 'PORTFOLIO GUIDE'}</span><p>{message.content}</p>{message.sources?.length > 0 && <ul className={styles.sources} aria-label="Sources">{message.sources.map((source, i) => <li key={i}>{source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">[{source.number}] {source.title}{source.heading ? ` · ${source.heading}` : ''}<span className={styles.srOnly}> (opens in a new tab)</span></a> : <span>[{source.number}] {source.title}</span>}</li>)}</ul>}</article>)}
-        {busy && <><article className={`${styles.message} ${styles.user}`} aria-label="You"><span className={styles.messageLabel}>YOU</span><p>{pending}</p></article><article className={styles.message} aria-label="Answer in progress"><span className={styles.messageLabel}>PORTFOLIO GUIDE · THINKING</span><p>{claims || status}</p>{claims && <small>Answer in progress — details may change.</small>}</article></>}
+        {messages.map((message, index) => <article key={message.id ?? index} className={`${styles.message} ${message.role === 'user' ? styles.user : ''}`} aria-label={message.role === 'user' ? 'You' : 'Portfolio guide'}><span className={styles.messageLabel}>{message.role === 'user' ? 'YOU' : 'PORTFOLIO GUIDE'}</span>{message.role === 'user' ? <p>{message.content}</p> : <AssistantResponse content={message.content} sources={message.sources} metrics={message.metrics} clientElapsedMs={message.clientElapsedMs} styles={styles} />}</article>)}
+        {busy && <><article className={`${styles.message} ${styles.user}`} aria-label="You"><span className={styles.messageLabel}>YOU</span><p>{pending}</p></article><article className={styles.message} aria-label="Answer in progress"><span className={styles.messageLabel}>PORTFOLIO GUIDE · THINKING</span><AssistantMarkdown content={claims || status} className={styles.markdown} />{claims && <small>Answer in progress — details may change.</small>}</article></>}
       </div>
       <form className={styles.form} onSubmit={event => { event.preventDefault(); submit(question) }}>
         {notice && <p className={styles.notice}>{notice}</p>}
