@@ -54,3 +54,11 @@ After deployment, open Ask about Tom, ask a factual question, ask a follow-up an
 ask for a conversation summary. Confirm the same HttpOnly session cookie is used
 on successive requests. Clear should rotate that cookie. Test a blocked origin,
 busy/rate-limit responses, Stop, and unavailable upstream without automatic retries.
+
+## Server metrics integration
+
+The current frontend accepts the exact deployed `LiquidAI/LFM3-1.7B` identifier.
+The API's final event supplies optional measured timings, generation/search counts,
+and runtime usage totals across all model calls, including memory compression.
+Without complete runtime usage, token values remain unavailable; other valid server
+metrics still display. Older responses do not retroactively acquire metrics.

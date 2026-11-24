@@ -66,3 +66,11 @@ it('bounds untrusted source metadata without coercing objects into display strin
   const result = normalizeChatResult({answer:'Safe answer',sources:[source]})
   assert.deepEqual(result.sources,[{number:'',title:'Source',heading:'h'.repeat(240),url:null}])
 })
+
+it('accepts the deployed LiquidAI model name without accepting arbitrary repository paths', async () => {
+  const {normalizeMetrics} = await import('../lib/chat-client.mjs')
+  const stats={model:'LiquidAI/LFM3-1.7B',elapsed_ms:100,model_calls:2,model_time_ms:90,search_calls:1,search_time_ms:5,prompt_tokens:10,completion_tokens:6,total_tokens:16,usage_complete:true,usage_source:'runtime',tokens_per_second:66.667}
+  assert.deepEqual(normalizeMetrics(stats),stats)
+  expect(normalizeMetrics({...stats,model:'private/secret-model'})).toBe(null)
+  expect(normalizeMetrics({...stats,model:'LiquidAI/https://secret.test'})).toBe(null)
+})
