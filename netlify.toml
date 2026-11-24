@@ -5,3 +5,12 @@
 [build.environment]
   NODE_VERSION = "22.21.1"
   NPM_FLAGS = "--legacy-peer-deps"
+
+# Same-origin session cookies and streaming, without the rewrite proxy timeout.
+[[edge_functions]]
+  function = "chat-proxy"
+  path = "/api/chat/stream"
+
+[[edge_functions]]
+  function = "chat-proxy"
+  path = "/api/conversation/reset"

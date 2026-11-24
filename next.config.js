@@ -3,9 +3,6 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
-  devIndicators: {
-    buildActivity: false,
-  },
   async redirects() {
     return [
       {

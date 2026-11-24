@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import '@/styles/globals.css'
+import ChatWidget from '../components/chat-widget'
 
 export default function App({ Component, pageProps }) {
   const [theme, setTheme] = useState('dark')
@@ -20,5 +21,8 @@ export default function App({ Component, pageProps }) {
     setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
   }
 
-  return <Component {...pageProps} theme={theme} toggleTheme={toggleTheme} />
+  return <>
+    <Component {...pageProps} theme={theme} toggleTheme={toggleTheme} />
+    <ChatWidget />
+  </>
 }
