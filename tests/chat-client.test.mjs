@@ -53,6 +53,27 @@ describe('response usage metadata and current stream events', () => {
     assert.deepEqual(events,['Partial **','legacy']); assert.equal(result.answer,'Final answer')
     for (const text of [42, null, 'x'.repeat(24001)]) await assert.rejects(readChatStream(stream(`event: delta\ndata: ${JSON.stringify({text})}\n\n` + fixture({answer:'Final',sources:[]}))), /incomplete or invalid/)
   })
+  it('validates resets and keeps cumulative text limits across repairs', async () => {
+    const events=[]
+    const result=await readChatStream(stream('event: delta\ndata: {"text":"Partial"}\n\nevent: reset\ndata: {}\n\n'+fixture({answer:'Corrected',sources:[]})), (kind,payload)=>events.push([kind,payload]))
+    assert.equal(result.answer,'Corrected')
+    assert.ok(events.some(([kind])=>kind==='reset'))
+    await assert.rejects(readChatStream(stream('event: reset\ndata: {"text":"untrusted"}\n\n'+fixture({answer:'Final',sources:[]}))), /incomplete or invalid/)
+    const delta='event: delta\ndata: '+JSON.stringify({text:'x'.repeat(13000)})+'\n\n'
+    await assert.rejects(readChatStream(stream(delta+'event: reset\ndata: {}\n\n'+delta+fixture({answer:'Final',sources:[]}))), /incomplete or invalid/)
+  })
+  it('keeps prompt cache telemetry separate from answer caching and unavailable metadata', async () => {
+    const {normalizeMetrics}=await import('../lib/chat-client.mjs')
+    const cache={prompt_cache_complete:true,cached_prompt_tokens:30,cache_prompt_tokens:40,prompt_cache_reuse_ratio:0.75}
+    assert.deepEqual(normalizeMetrics({...metrics,...cache}),{...metrics,...cache})
+    assert.equal(normalizeMetrics({...metrics,...cache,cached_prompt_tokens:0}).prompt_cache_reuse_ratio,0)
+    for(const bad of [null,-1,41,true]) {
+      const normalized=normalizeMetrics({...metrics,...cache,cached_prompt_tokens:bad})
+      assert.equal(normalized.prompt_cache_complete,false)
+      assert.equal(normalized.cached_prompt_tokens,null)
+    }
+    assert.equal(normalizeMetrics({...metrics,...cache,prompt_cache_complete:false}).cached_prompt_tokens,null)
+  })
 })
 it('accepts short public runtime model tags but drops URLs, credentials, and oversized metadata strings', async () => {
   const { normalizeMetrics } = await import('../lib/chat-client.mjs')

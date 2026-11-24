@@ -119,6 +119,7 @@ export default function ChatWidget() {
         if (!alive.current || current !== generation.current) return
         if (kind === 'status') setStatus(payload.message)
         if (kind === 'delta') setClaims(previous => previous + payload.text)
+        if (kind === 'reset') setClaims('')
         if (kind === 'claim') setClaims(previous => previous + (previous ? '\n\n' : '') + payload.text)
       })
       if (!alive.current || current !== generation.current) return

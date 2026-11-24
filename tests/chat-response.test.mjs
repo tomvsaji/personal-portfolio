@@ -57,3 +57,15 @@ it('does not let formatted numeric links bypass citation matching or ambiguously
   assert.doesNotMatch(html, /<a/)
   assert.match(html, /<strong>\[9\]<\/strong>/)
 })
+it('labels reported prompt reuse, explicit zero and unavailable cache telemetry separately', async () => {
+  const {AssistantResponse}=await import('../lib/chat-response.mjs')
+  const metrics={model:'LiquidAI/LFM3-1.7B',elapsed_ms:100,model_calls:2,model_time_ms:90,search_calls:1,search_time_ms:5,prompt_tokens:100,completion_tokens:10,total_tokens:110,usage_complete:true,usage_source:'runtime',tokens_per_second:1,prompt_cache_complete:true,cached_prompt_tokens:75,cache_prompt_tokens:100,prompt_cache_reuse_ratio:0.75}
+  const render=overrides=>renderToStaticMarkup(React.createElement(AssistantResponse,{content:'Answer',metrics:{...metrics,...overrides}}))
+  const html=render({})
+  assert.match(html,/<dt>Prompt cache<\/dt><dd>Reused<\/dd>/)
+  assert.match(html,/<dt>Cached prompt tokens<\/dt><dd>75<\/dd>/)
+  assert.match(html,/<dt>Prompt reuse<\/dt><dd>75.0%<\/dd>/)
+  assert.match(html,/not a cached answer/)
+  assert.match(render({cached_prompt_tokens:0}),/<dt>Prompt cache<\/dt><dd>No reuse reported<\/dd>/)
+  assert.match(render({prompt_cache_complete:false}),/<dt>Prompt cache<\/dt><dd>Unavailable<\/dd>/)
+})

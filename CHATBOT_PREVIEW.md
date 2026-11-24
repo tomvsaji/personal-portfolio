@@ -62,3 +62,9 @@ The API's final event supplies optional measured timings, generation/search coun
 and runtime usage totals across all model calls, including memory compression.
 Without complete runtime usage, token values remain unavailable; other valid server
 metrics still display. Older responses do not retroactively acquire metrics.
+
+Prompt cache stats report runtime prompt/KV reuse across all generation calls:
+status, cached prompt tokens and a weighted reuse percentage. A reused prompt is
+not a cached answer. Missing cache telemetry remains unavailable. The client also
+accepts a validated empty `reset` SSE event to clear provisional answer text during
+a tool round or citation repair; stream limits remain cumulative across resets.
